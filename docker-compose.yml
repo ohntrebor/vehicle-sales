@@ -83,7 +83,7 @@ services:
   # ===========================================
   # SERVIÇO: Vehicle Catalog API
   # ===========================================
-  vehicle-catalog-api:
+  vehicle-catalog:
     # Imagem do GitHub Container Registry
     image: ghcr.io/ohntrebor/vehicle-catalog:latest
     
@@ -120,7 +120,7 @@ services:
   # ===========================================
   # SERVIÇO: API .NET 8 VehicleSales
   # ===========================================
-  vehicle-sales-api:
+  sales-api:
     # Build da imagem usando o Dockerfile local
     build:
       context: .           # Contexto é a pasta atual
