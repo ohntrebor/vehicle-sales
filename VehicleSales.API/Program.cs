@@ -8,6 +8,7 @@ using VehicleSales.Infrastructure.Repositories;
 using VehicleSales.Application.Gateways;
 using VehicleSales.Application.Presenters;
 using VehicleSales.Application.Controllers;
+using VehicleSales.Application.Interfaces;
 using VehicleSales.Infrastructure.Gateways;
 using VehicleSales.Infrastructure.Services;
 
@@ -44,12 +45,24 @@ builder.Services.AddScoped<IMongoDatabase>(serviceProvider =>
 builder.Services.AddScoped<IVehicleSaleRepository, VehicleSaleRepository>();
 
 // 4. External Services
-builder.Services.AddHttpClient<IVehicleCatalogService, VehicleCatalogService>(client =>
+// Primeiro registre o HttpClient para VehicleCatalogService
+builder.Services.AddHttpClient<VehicleCatalogService>(client =>
 {
     var baseUrl = builder.Configuration.GetValue<string>("ExternalServices:VehicleCatalogApi");
     client.BaseAddress = new Uri(baseUrl);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
+
+// Em seguida, registre o service e suas interfaces
+builder.Services.AddScoped<VehicleCatalogService>();
+
+// Interface do Domain (para uso nos Use Cases)
+builder.Services.AddScoped<IVehicleCatalogService>(provider => 
+    provider.GetRequiredService<VehicleCatalogService>());
+
+// Interface da Application (para uso nos Controllers de consulta)
+builder.Services.AddScoped<IVehicleCatalogQueryService>(provider => 
+    provider.GetRequiredService<VehicleCatalogService>());
 
 // 5. Clean Architecture Services
 builder.Services.AddScoped<ISaleGateway, SaleGateway>();
@@ -159,26 +172,32 @@ using (var scope = app.Services.CreateScope())
                 
                 break;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 retries++;
                 if (retries == maxRetries) throw;
                 
-                logger.LogWarning($"MongoDB não disponível. Tentativa {retries}/{maxRetries}. Aguardando 5 segundos...");
+                logger.LogWarning($"MongoDB não disponível. Motivo {ex.Message}. Tentativa {retries}/{maxRetries}. Aguardando 5 segundos...");
                 await Task.Delay(5000);
             }
         }
 
         // Verificar conexão com VehicleCatalog API
         logger.LogInformation("Verificando conexão com Vehicle Catalog API...");
+        
+        // CORRIGIDO - Use a interface correta
         var catalogService = services.GetRequiredService<IVehicleCatalogService>();
         
         // Teste simples de conectividade (não obrigatório)
         try
         {
-            var httpClient = services.GetRequiredService<HttpClient>();
+            // Para teste de conectividade, use o HttpClientFactory
+            var httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
+            var httpClient = httpClientFactory.CreateClient();
             var catalogApiUrl = builder.Configuration.GetValue<string>("ExternalServices:VehicleCatalogApi");
-            var response = await httpClient.GetAsync($"{catalogApiUrl}/health");
+            
+            httpClient.BaseAddress = new Uri(catalogApiUrl);
+            var response = await httpClient.GetAsync("/health");
             
             if (response.IsSuccessStatusCode)
                 logger.LogInformation("Vehicle Catalog API disponível!");
