@@ -14,6 +14,6 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AXunitTestRunner_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002E_002E_003FAppData_003FRoaming_003FJetBrains_003FRider2025_002E1_003Fresharper_002Dhost_003FSourcesCache_003F7a6f9555e47e5e4b4d3949244ea2e22bb8141caacfb7145f5ccf83e9eae4c6f_003FXunitTestRunner_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=11c17049_002D7163_002D4079_002Db73f_002Dd06282726f5c/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Should_Create_Vehicle_With_Constructor" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
-    &lt;TestId&gt;xUnit::70B0A740-4F07-4C1A-AD60-A45F606D9504::net9.0::VehicleResale.Tests.IntegrationTests.VehicleTests.Should_Handle_Concurrent_Operations&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::70B0A740-4F07-4C1A-AD60-A45F606D9504::net8.0::VehicleSales.Tests.UnitTests.VehicleSaleUnitTests.Should_Create_VehicleSale_With_Valid_Properties&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
