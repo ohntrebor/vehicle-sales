@@ -106,7 +106,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa se a consulta retorna apenas vendas com status específico
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "Querying")]
     [Fact]
     public async Task Should_Get_Sales_By_Payment_Status()
@@ -151,7 +150,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa se a consulta por código de pagamento funciona corretamente
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "Querying")]
     [Fact]
     public async Task Should_Find_Sale_By_Payment_Code()
@@ -188,7 +186,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa se a consulta por CPF do comprador funciona corretamente
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "Querying")]
     [Fact]
     public async Task Should_Find_Sales_By_Buyer_Cpf()

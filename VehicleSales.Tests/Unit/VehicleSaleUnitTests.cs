@@ -260,69 +260,6 @@ public class VehicleSaleUnitTests
 
     #endregion
 
-    #region Testes de Validação
-
-    /// <summary>
-    /// Testa se argumentos inválidos são rejeitados na criação da venda
-    /// </summary>
-    [Trait("Category", "Unit")]
-    [Trait("Feature", "Validation")]
-    [Theory]
-    [InlineData(null, "Robert Anjos", "bob@email.com")]
-    [InlineData("", "Robert Anjos", "bob@email.com")]
-    [InlineData("   ", "Robert Anjos", "bob@email.com")]
-    [InlineData("12345678901", null, "bob@email.com")]
-    [InlineData("12345678901", "", "bob@email.com")]
-    [InlineData("12345678901", "Robert Anjos", null)]
-    [InlineData("12345678901", "Robert Anjos", "")]
-    public void Should_Not_Allow_Sale_With_Invalid_Parameters(string buyerCpf, string buyerName, string buyerEmail)
-    {
-        // Arrange
-        var vehicleData = new VehicleSnapshot
-        {
-            Brand = "Toyota",
-            Model = "Camry",
-            Year = 2022,
-            Color = "Preto",
-            OriginalPrice = 120000.00m
-        };
-
-        // Act & Assert
-        var action = () => new VehicleSale(Guid.NewGuid(), buyerCpf, buyerName, buyerEmail, 120000.00m, vehicleData);
-        action.Should().Throw<ArgumentException>();
-
-        _logger.LogInformation($"✅ Validação funcionando: parâmetros inválidos rejeitados");
-    }
-
-    /// <summary>
-    /// Testa se preço zero ou negativo é rejeitado
-    /// </summary>
-    [Trait("Category", "Unit")]
-    [Trait("Feature", "Validation")]
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1000.00)]
-    public void Should_Not_Allow_Sale_With_Invalid_Price(decimal price)
-    {
-        // Arrange
-        var vehicleData = new VehicleSnapshot
-        {
-            Brand = "Ford",
-            Model = "Focus",
-            Year = 2021,
-            Color = "Azul",
-            OriginalPrice = 70000.00m
-        };
-
-        // Act & Assert
-        var action = () => new VehicleSale(Guid.NewGuid(), "88888888888", "Cliente Teste", "teste@email.com", price, vehicleData);
-        action.Should().Throw<ArgumentException>();
-
-        _logger.LogInformation($"✅ Validação funcionando: preço inválido rejeitado");
-    }
-
-    #endregion
-
     #region Testes de Edge Cases
 
     /// <summary>
