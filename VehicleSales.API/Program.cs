@@ -76,7 +76,7 @@ builder.Services.AddHealthChecks()
         name: "mongodb",
         timeout: TimeSpan.FromSeconds(5))
     .AddUrlGroup(
-        uri: new Uri(builder.Configuration.GetValue<string>("ExternalServices:VehicleCatalogApi") + "/health"),
+        uri: new Uri(builder.Configuration.GetValue<string>("ExternalServices:VehicleCatalogApi") + "/api/health"),
         name: "vehiclecatalog-api",
         timeout: TimeSpan.FromSeconds(5));
 

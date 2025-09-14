@@ -27,8 +27,8 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
     {
         if (httpClient.BaseAddress == null)
         {
-            httpClient.BaseAddress = new Uri("http://localhost:7157/api");
-            logger.LogWarning("BaseAddress não configurada, usando fallback: http://localhost:5000/api");
+            httpClient.BaseAddress = new Uri("https://localhost:7157");
+            logger.LogWarning("BaseAddress não configurada, usando fallback: http://localhost:5000");
         }
         else
         {
@@ -91,7 +91,7 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
             var json = JsonSerializer.Serialize(payload, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await _httpClient.PostAsync("/vehicles/payment-webhook", content);
+            var response = await _httpClient.PostAsync("/api/vehicles/payment-webhook", content);
             
             if (response.IsSuccessStatusCode)
             {
@@ -125,7 +125,7 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
         {
             logger.LogInformation("Buscando veículo específico {VehicleId}...", vehicleId);
             
-            var response = await _httpClient.GetAsync($"/vehicles/{vehicleId}");
+            var response = await _httpClient.GetAsync($"/api/vehicles/{vehicleId}");
             
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -160,7 +160,7 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
         {
             logger.LogInformation("Buscando todos os veículos disponíveis...");
             
-            var response = await _httpClient.GetAsync("/Vehicles/available");
+            var response = await _httpClient.GetAsync("api/vehicles/available");
             
             if (!response.IsSuccessStatusCode)
             {
@@ -210,7 +210,7 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
                 queryParams.Add($"year={year.Value}");
 
             var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
-            var response = await _httpClient.GetAsync($"/vehicles/search{queryString}");
+            var response = await _httpClient.GetAsync($"/api/vehicles/search{queryString}");
             
             if (!response.IsSuccessStatusCode)
             {
