@@ -1,0 +1,50 @@
+# ===========================================
+# CONFIGMAP - Configurações não sensíveis
+# ===========================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # Nome do ConfigMap que será referenciado pelos Deployments
+  name: vehicle-sales-config
+  
+  # Namespace onde o ConfigMap será criado
+  namespace: vehicle-sales
+  
+  # Labels para organização
+  labels:
+    app: vehicle-sales
+    component: configuration
+
+data:
+  # ===========================================
+  # Configurações da Aplicação .NET
+  # ===========================================
+  
+  # Ambiente da aplicação
+  # Development = logs detalhados, erros completos
+  # Production = logs otimizados, erros genéricos
+  ASPNETCORE_ENVIRONMENT: "Production"
+  
+  # URLs que a aplicação vai escutar
+  # http://+:80 = escuta em todas interfaces na porta 80
+  ASPNETCORE_URLS: "http://+:80"
+  
+  # Nível de log
+  # Trace, Debug, Information, Warning, Error, Critical
+  LOG_LEVEL: "Information"
+  
+  # Habilitar Swagger em produção
+  # true = swagger disponível, false = swagger desabilitado
+  ENABLE_SWAGGER: "true"
+  
+  # Timeout de requisições em segundos
+  REQUEST_TIMEOUT: "30"
+  
+  # Configurações de CORS
+  CORS_ORIGINS: "*"  # Em produção, especifique os domínios permitidos
+  
+  # Configurações de Health Check
+  HEALTH_CHECK_PATH: "/health"
+  LIVENESS_PATH: "/health/live"
+  READINESS_PATH: "/health/ready"

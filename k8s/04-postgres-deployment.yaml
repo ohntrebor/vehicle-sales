@@ -1,0 +1,205 @@
+# ===========================================
+# DEPLOYMENT - PostgreSQL Database
+# ===========================================
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Nome do Deployment
+  name: postgres
+  
+  # Namespace onde será criado
+  namespace: vehicle-sales
+  
+  # Labels para organização e seleção
+  labels:
+    app: postgres
+    component: database
+    tier: data
+    version: "16"
+
+spec:
+  # ===========================================
+  # Configuração de Réplicas
+  # ===========================================
+  # PostgreSQL básico suporta apenas 1 réplica
+  # Para HA, use PostgreSQL com replicação ou operadores
+  replicas: 1
+  
+  # ===========================================
+  # Estratégia de Update
+  # ===========================================
+  strategy:
+    # Recreate = derruba o pod antigo antes de criar o novo
+    # RollingUpdate = cria novo pod antes de derrubar o antigo
+    type: Recreate  # Banco de dados deve usar Recreate
+  
+  # ===========================================
+  # Seletor de Pods
+  # ===========================================
+  # Define quais pods este Deployment gerencia
+  selector:
+    matchLabels:
+      app: postgres
+      component: database
+  
+  # ===========================================
+  # Template do Pod
+  # ===========================================
+  template:
+    metadata:
+      # Labels do Pod (devem corresponder ao selector)
+      labels:
+        app: postgres
+        component: database
+        tier: data
+    
+    spec:
+      # ===========================================
+      # Containers
+      # ===========================================
+      containers:
+        - name: postgres
+          
+          # Imagem do PostgreSQL
+          # 16-alpine = versão 16 com Alpine Linux (menor)
+          # 16 = versão 16 com Debian (maior, mais ferramentas)
+          # latest = última versão (não use em produção!)
+          image: postgres:16-alpine
+          
+          # Política de pull da imagem
+          # Always = sempre baixa a imagem
+          # IfNotPresent = baixa apenas se não existir
+          # Never = nunca baixa, usa local
+          imagePullPolicy: IfNotPresent
+          
+          # ===========================================
+          # Portas
+          # ===========================================
+          ports:
+            - containerPort: 5432      # Porta padrão do PostgreSQL
+              name: postgres           # Nome da porta para referência
+              protocol: TCP            # Protocolo TCP
+          
+          # ===========================================
+          # Variáveis de Ambiente
+          # ===========================================
+          env:
+            # Usuário administrador do PostgreSQL
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: vehicle-sales-secrets
+                  key: db-username
+            
+            # Senha do usuário administrador
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vehicle-sales-secrets
+                  key: db-password
+            
+            # Nome do banco de dados inicial
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: vehicle-sales-secrets
+                  key: db-name
+            
+            # Diretório onde PostgreSQL armazena dados
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            
+            # Configurações de performance (opcional)
+            - name: POSTGRES_INITDB_ARGS
+              value: "--encoding=UTF8 --locale=C"
+            
+            # Configurações adicionais (opcional)
+            # - name: POSTGRES_HOST_AUTH_METHOD
+            #   value: "scram-sha-256"  # Método de autenticação
+          
+          # ===========================================
+          # Volumes
+          # ===========================================
+          volumeMounts:
+            # Volume para dados persistentes
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+            
+            # Volume para scripts de inicialização (opcional)
+            # - name: init-scripts
+            #   mountPath: /docker-entrypoint-initdb.d
+            #   readOnly: true
+          
+          # ===========================================
+          # Recursos
+          # ===========================================
+          resources:
+            # Recursos mínimos garantidos
+            requests:
+              memory: "256Mi"   # 256MB RAM mínimo
+              cpu: "250m"       # 0.25 CPU cores
+            
+            # Recursos máximos permitidos
+            limits:
+              memory: "1Gi"     # 1GB RAM máximo
+              cpu: "1000m"      # 1 CPU core máximo
+          
+          # ===========================================
+          # Health Checks
+          # ===========================================
+          
+          # Liveness Probe - verifica se o container está vivo
+          # Se falhar, Kubernetes reinicia o container
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 30    # Aguarda 30s após iniciar
+            periodSeconds: 10          # Verifica a cada 10s
+            timeoutSeconds: 5          # Timeout de 5s
+            failureThreshold: 3        # Falha após 3 tentativas
+            successThreshold: 1        # Sucesso após 1 tentativa OK
+          
+          # Readiness Probe - verifica se está pronto para receber tráfego
+          # Se falhar, remove o pod do load balancer
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 5     # Aguarda 5s após iniciar
+            periodSeconds: 5           # Verifica a cada 5s
+            timeoutSeconds: 3          # Timeout de 3s
+            failureThreshold: 3        # Falha após 3 tentativas
+            successThreshold: 1        # Sucesso após 1 tentativa OK
+          
+          # Startup Probe - verifica inicialização lenta (opcional)
+          # startupProbe:
+          #   exec:
+          #     command:
+          #       - /bin/sh
+          #       - -c
+          #       - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          #   initialDelaySeconds: 0
+          #   periodSeconds: 10
+          #   timeoutSeconds: 5
+          #   failureThreshold: 30    # Permite até 5 minutos para iniciar
+      
+      # ===========================================
+      # Volumes
+      # ===========================================
+      volumes:
+        # Volume persistente para dados
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        
+        # Volume para scripts de inicialização (opcional)
+        # - name: init-scripts
+        #   configMap:
+        #     name: postgres-init-scripts

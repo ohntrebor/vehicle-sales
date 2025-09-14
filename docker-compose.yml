@@ -1,0 +1,99 @@
+# ===========================================
+# DOCKER COMPOSE - Orquestração Local
+# ===========================================
+# Define todos os serviços necessários para rodar a aplicação localmente
+# Comando para executar: docker-compose up -d
+
+services:
+  # ===========================================
+  # SERVIÇO: PostgreSQL Database
+  # ===========================================
+  postgres:
+    # Imagem oficial do PostgreSQL 16
+    image: postgres:16-alpine
+    
+    # Nome do container para fácil identificação
+    container_name: vehicle-sales-db
+    
+    # Variáveis de ambiente para configurar o PostgreSQL
+    environment:
+      - POSTGRES_USER=admin                      # Usuário do banco
+      - POSTGRES_PASSWORD=ra02xbo-P              # Senha do usuário
+      - POSTGRES_DB=vehicle-db                   # Nome do banco de dados
+      - PGDATA=/var/lib/postgresql/data/pgdata  # Diretório dos dados
+    
+    # Mapeamento de portas HOST:CONTAINER
+    ports:
+      - "5432:5432"                              # Porta padrão do PostgreSQL
+    
+    # Volume para persistir dados do banco
+    volumes:
+      - postgres-data:/var/lib/postgresql/data   # Dados persistem após restart
+    
+    # Rede interna para comunicação entre containers
+    networks:
+      - vehicle-sales-network
+    
+    # Healthcheck para verificar se o banco está pronto
+    healthcheck:
+      # Comando para testar conexão com o banco
+      test: ["CMD-SHELL", "pg_isready -U admin -d vehicle-db"]
+      interval: 10s        # Verifica a cada 10 segundos
+      timeout: 5s          # Timeout de 5 segundos
+      retries: 10          # Tenta 10 vezes
+      start_period: 30s    # Aguarda 30s antes de começar
+
+  # ===========================================
+  # SERVIÇO: API .NET 8
+  # ===========================================
+  api:
+    # Build da imagem usando o Dockerfile local
+    build:
+      context: .           # Contexto é a pasta atual
+      dockerfile: Dockerfile
+    
+    # Nome do container
+    container_name: vehicle-sales-api
+    
+    # Variáveis de ambiente para a aplicação
+    environment:
+      # Ambiente de desenvolvimento (mostra erros detalhados)
+      - ASPNETCORE_ENVIRONMENT=Development
+      
+      # URL que a aplicação vai escutar
+      - ASPNETCORE_URLS=http://+:80
+      
+      # String de conexão - note que usa 'postgres' como host (nome do serviço)
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=vehicle-db;Username=admin;Password=ra02xbo-P;Port=5432
+    
+    # Mapeamento de portas
+    ports:
+      - "5000:80"          # Acesse a API em http://localhost:5000
+    
+    # Dependências - só inicia após o PostgreSQL estar saudável
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    # Mesma rede do banco para comunicação interna
+    networks:
+      - vehicle-sales-network
+    
+    # Política de restart
+    restart: unless-stopped    # Reinicia automaticamente se cair
+
+# ===========================================
+# VOLUMES - Armazenamento Persistente
+# ===========================================
+volumes:
+  postgres-data:               # Volume nomeado para dados do PostgreSQL
+    driver: local              # Driver local do Docker
+  pgadmin-data:                # Volume para configurações do pgAdmin
+    driver: local
+
+# ===========================================
+# NETWORKS - Rede para Comunicação
+# ===========================================
+networks:
+  vehicle-sales-network:      # Rede isolada para os serviços
+    driver: bridge             # Driver bridge

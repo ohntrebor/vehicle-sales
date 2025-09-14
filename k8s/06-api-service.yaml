@@ -1,0 +1,131 @@
+# ===========================================
+# SERVICE - Expõe a API para acesso externo
+# ===========================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  # Nome do Service
+  name: vehicle-sales-api-service
+  
+  # Namespace onde será criado
+  namespace: vehicle-sales
+  
+  # Labels para organização
+  labels:
+    app: vehicle-sales-api
+    component: backend
+    tier: application
+  
+  # Annotations para configurações específicas
+  annotations:
+    description: "Service para expor a Vehicle Sales API"
+    
+    # Annotations específicas para cloud providers
+    # AWS
+    # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    # service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    
+    # Azure
+    # service.beta.kubernetes.io/azure-load-balancer-internal: "false"
+    
+    # GCP
+    # cloud.google.com/load-balancer-type: "External"
+
+spec:
+  # ===========================================
+  # Tipo do Service
+  # ===========================================
+  # ClusterIP = apenas interno (padrão)
+  # NodePort = expõe em porta alta do node (30000-32767)
+  # LoadBalancer = cria load balancer externo (cloud)
+  # ExternalName = mapeia para DNS externo
+  
+  # Para Minikube: use NodePort ou LoadBalancer com tunnel
+  # Para Cloud: use LoadBalancer
+  type: LoadBalancer
+  
+  # ===========================================
+  # Seletor de Pods
+  # ===========================================
+  # Define quais pods receberão tráfego
+  selector:
+    app: vehicle-sales-api
+    component: backend
+  
+  # ===========================================
+  # Portas
+  # ===========================================
+  ports:
+    # Porta HTTP
+    - name: http              # Nome da porta
+      port: 80               # Porta do Service (externa)
+      targetPort: 80         # Porta do Container
+      protocol: TCP          # Protocolo
+      
+      # NodePort específico (opcional, apenas para type: NodePort)
+      # Se não especificar, Kubernetes escolhe automaticamente
+      # nodePort: 30080      # Deve estar entre 30000-32767
+    
+    # Porta HTTPS (se configurado)
+    # - name: https
+    #   port: 443
+    #   targetPort: 443
+    #   protocol: TCP
+    #   # nodePort: 30443
+  
+  # ===========================================
+  # Session Affinity
+  # ===========================================
+  # None = requisições distribuídas entre pods (padrão)
+  # ClientIP = requisições do mesmo IP vão pro mesmo pod
+  sessionAffinity: None
+  
+  # Configuração de session affinity (se ClientIP)
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 10800  # 3 horas
+  
+  # ===========================================
+  # Configurações para LoadBalancer
+  # ===========================================
+  
+  # IP específico do LoadBalancer (cloud)
+  # loadBalancerIP: "40.121.183.52"
+  
+  # Restringe origem do tráfego (whitelist)
+  # loadBalancerSourceRanges:
+  #   - "10.0.0.0/8"       # Rede interna
+  #   - "192.168.0.0/16"   # Rede local
+  #   - "203.0.113.0/24"   # IPs específicos
+  
+  # Preserva IP do cliente
+  # externalTrafficPolicy: Local  # ou Cluster (padrão)
+  
+  # ===========================================
+  # Configurações para NodePort
+  # ===========================================
+  
+  # Health check do node (NodePort/LoadBalancer)
+  # healthCheckNodePort: 30000
+  
+  # ===========================================
+  # IPs Externos 
+  # ===========================================
+  # IPs externos que roteiam para este service
+  # externalIPs:
+  #   - "192.168.1.100"
+  #   - "192.168.1.101"
+  
+  # ===========================================
+  # Configurações Adicionais
+  # ===========================================
+  
+  # IP interno do cluster (auto-atribuído se vazio)
+  # clusterIP: ""
+  
+  # Publica endpoints mesmo se pods não estão prontos
+  # publishNotReadyAddresses: false
+  
+  # Tempo limite para conexões idle
+  # timeoutSeconds: 300

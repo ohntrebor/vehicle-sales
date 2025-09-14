@@ -1,0 +1,60 @@
+# ===========================================
+# DOCKERIGNORE - Arquivos ignorados no build
+# ===========================================
+# Evita copiar arquivos desnecessários para o contexto do Docker
+# Isso torna o build mais rápido e a imagem menor
+
+# Arquivos de controle de versão
+**/.git
+**/.gitignore
+
+# Arquivos de configuração de IDEs
+**/.classpath
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/.idea
+
+# Arquivos de usuário do Visual Studio
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+
+# Pastas de build e binários (serão recriados)
+**/bin
+**/obj
+
+# Arquivos de log e debug
+**/npm-debug.log
+**/*.log
+
+# Arquivos Docker (não precisam estar na imagem)
+**/docker-compose*
+**/compose*
+**/Dockerfile*
+**/.dockerignore
+
+# Kubernetes manifests
+**/k8s
+
+# Documentação (não necessária na imagem)
+README.md
+*.md
+
+# Arquivos de ambiente e secrets
+**/.env
+**/secrets.dev.yaml
+**/values.dev.yaml
+
+# Node modules (se houver frontend)
+**/node_modules
+
+# Arquivos de teste
+**/*Tests
+**/*Test
+
+# Arquivos temporários
+*.tmp
+*.temp

@@ -1,0 +1,69 @@
+# ===========================================
+# PVC - Persistent Volume Claim para PostgreSQL
+# ===========================================
+# Solicita armazenamento persistente para o banco de dados
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  # Nome do PVC que será referenciado pelo Deployment do PostgreSQL
+  name: postgres-pvc
+  
+  # Namespace onde o PVC será criado
+  namespace: vehicle-sales
+  
+  # Labels para organização
+  labels:
+    app: vehicle-sales
+    component: database-storage
+    tier: persistence
+
+spec:
+  # ===========================================
+  # Modo de Acesso
+  # ===========================================
+  # ReadWriteOnce (RWO) = volume pode ser montado read-write por um único node
+  # ReadOnlyMany (ROX) = volume pode ser montado read-only por vários nodes
+  # ReadWriteMany (RWX) = volume pode ser montado read-write por vários nodes
+  accessModes:
+    - ReadWriteOnce  # PostgreSQL precisa de acesso exclusivo
+  
+  # ===========================================
+  # Recursos Solicitados
+  # ===========================================
+  resources:
+    requests:
+      # Tamanho do volume
+      # Desenvolvimento: 2Gi é suficiente
+      # Produção: ajuste conforme necessidade (10Gi, 50Gi, 100Gi+)
+      storage: 2Gi
+  
+  # ===========================================
+  # Storage Class
+  # ===========================================
+  # Define o tipo de armazenamento
+  # standard = disco padrão do cluster
+  # fast/ssd = disco SSD (se disponível)
+  # slow/hdd = disco HDD econômico
+  # Minikube: use 'standard'
+  # AWS EKS: use 'gp2' ou 'gp3'
+  # GKE: use 'standard' ou 'pd-ssd'
+  # Azure AKS: use 'default' ou 'managed-premium'
+  storageClassName: standard
+  
+  # ===========================================
+  # Volume Mode 
+  # ===========================================
+  # Filesystem = monta como sistema de arquivos (padrão)
+  # Block = monta como dispositivo de bloco raw
+  volumeMode: Filesystem
+  
+  # ===========================================
+  # Selector 
+  # ===========================================
+  # Permite vincular a um PV específico se necessário
+  # selector:
+  #   matchLabels:
+  #     release: "stable"
+  #   matchExpressions:
+  #     - {key: environment, operator: In, values: [production]}

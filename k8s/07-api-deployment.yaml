@@ -1,0 +1,316 @@
+# ===========================================
+# DEPLOYMENT - Vehicle Sales API
+# ===========================================
+# Define como a API .NET será executada no cluster
+# Configurado para alta disponibilidade com múltiplas réplicas
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  # Nome do Deployment
+  name: vehicle-sales-api
+  
+  # Namespace onde será criado
+  namespace: vehicle-sales
+  
+  # Labels para organização
+  labels:
+    app: vehicle-sales-api
+    component: backend
+    tier: application
+    version: v1.0.0
+    framework: dotnet8
+
+spec:
+  # ===========================================
+  # Configuração de Réplicas
+  # ===========================================
+  # Desenvolvimento: 1-2 réplicas
+  # Produção: 3+ réplicas para alta disponibilidade
+  replicas: 2
+  
+  # ===========================================
+  # Estratégia de Deployment
+  # ===========================================
+  strategy:
+    # RollingUpdate = atualiza pods gradualmente (zero downtime)
+    # Recreate = derruba todos antes de criar novos (downtime)
+    type: RollingUpdate
+    
+    rollingUpdate:
+      # Máximo de pods extras durante update
+      maxSurge: 1
+      
+      # Máximo de pods indisponíveis durante update
+      # 0 = zero downtime garantido
+      maxUnavailable: 0
+  
+  # ===========================================
+  # Histórico de Revisões
+  # ===========================================
+  # Quantas revisões antigas manter (para rollback)
+  revisionHistoryLimit: 10
+  
+  # ===========================================
+  # Tempo de Progresso
+  # ===========================================
+  # Tempo máximo para considerar deployment travado
+  progressDeadlineSeconds: 600  # 10 minutos
+  
+  # ===========================================
+  # Seletor de Pods
+  # ===========================================
+  selector:
+    matchLabels:
+      app: vehicle-sales-api
+      component: backend
+  
+  # ===========================================
+  # Template do Pod
+  # ===========================================
+  template:
+    metadata:
+      # Labels do Pod
+      labels:
+        app: vehicle-sales-api
+        component: backend
+        tier: application
+        version: v1.0.0
+      
+      # Annotations do Pod
+      annotations:
+        prometheus.io/scrape: "true"      # Habilita scraping do Prometheus
+        prometheus.io/port: "80"          # Porta para métricas
+        prometheus.io/path: "/metrics"    # Path para métricas
+    
+    spec:
+      # ===========================================
+      # Configurações de Segurança
+      # ===========================================
+      # securityContext:
+      #   runAsNonRoot: true
+      #   runAsUser: 1000
+      #   fsGroup: 2000
+      
+      # ===========================================
+      # Service Account
+      # ===========================================
+      # serviceAccountName: vehicle-sales-api-sa
+      
+      # ===========================================
+      # Containers
+      # ===========================================
+      containers:
+        - name: api
+          
+          # Imagem da aplicação
+          # Para Minikube: use uma tag específica e Never/IfNotPresent
+          # Para Produção: use registry completo e Always
+          image: vehicle-sales-api:latest
+          
+          # Política de pull
+          # Always = sempre baixa a imagem
+          # IfNotPresent = baixa se não existir localmente
+          # Never = usa apenas imagem local (Minikube)
+          imagePullPolicy: Never  # Mude para Always em produção
+          
+          
+          
+          # ===========================================
+          # Portas
+          # ===========================================
+          ports:
+            - containerPort: 80        # Porta HTTP da aplicação
+              name: http               # Nome para referência
+              protocol: TCP            # Protocolo
+            
+            # Porta HTTPS (se configurado)
+            # - containerPort: 443
+            #   name: https
+            #   protocol: TCP
+          
+          # ===========================================
+          # Variáveis de Ambiente
+          # ===========================================
+          env:
+            # Ambiente do ASP.NET Core
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: vehicle-sales-config
+                  key: ASPNETCORE_ENVIRONMENT
+            
+            # URLs de escuta
+            - name: ASPNETCORE_URLS
+              valueFrom:
+                configMapKeyRef:
+                  name: vehicle-sales-config
+                  key: ASPNETCORE_URLS
+            
+            # Connection String do banco de dados
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: vehicle-sales-secrets
+                  key: connection-string
+            
+            # Nível de log
+            - name: Logging__LogLevel__Default
+              valueFrom:
+                configMapKeyRef:
+                  name: vehicle-sales-config
+                  key: LOG_LEVEL
+            
+            # Configurações adicionais
+            - name: ENABLE_SWAGGER
+              valueFrom:
+                configMapKeyRef:
+                  name: vehicle-sales-config
+                  key: ENABLE_SWAGGER
+            
+            # Informações do Pod (útil para debug)
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          
+          # ===========================================
+          # Recursos
+          # ===========================================
+          resources:
+            # Recursos mínimos garantidos
+            requests:
+              memory: "256Mi"   # 256MB RAM mínimo
+              cpu: "100m"       # 0.1 CPU cores
+            
+            # Recursos máximos permitidos
+            limits:
+              memory: "512Mi"   # 512MB RAM máximo
+              cpu: "500m"       # 0.5 CPU cores
+          
+          # ===========================================
+          # Health Checks
+          # ===========================================
+          
+          # Liveness Probe - verifica se a aplicação está viva
+          # Se falhar, Kubernetes reinicia o container
+          livenessProbe:
+            httpGet:
+              path: /health          # Endpoint de health
+              port: 80              # Porta
+              scheme: HTTP          # Protocolo
+            
+            initialDelaySeconds: 30  # Aguarda 30s após iniciar
+            periodSeconds: 10        # Verifica a cada 10s
+            timeoutSeconds: 5        # Timeout de 5s
+            failureThreshold: 3      # Falha após 3 tentativas
+            successThreshold: 1      # OK após 1 sucesso
+          
+          # Readiness Probe - verifica se está pronto para tráfego
+          # Se falhar, remove do load balancer temporariamente
+          readinessProbe:
+            httpGet:
+              path: /health          # Endpoint de health
+              port: 80              # Porta
+              scheme: HTTP          # Protocolo
+            
+            initialDelaySeconds: 5   # Aguarda 5s após iniciar
+            periodSeconds: 5         # Verifica a cada 5s
+            timeoutSeconds: 3        # Timeout de 3s
+            failureThreshold: 3      # Falha após 3 tentativas
+            successThreshold: 1      # OK após 1 sucesso
+          
+          # Startup Probe - para aplicações com inicialização lenta
+          # startupProbe:
+          #   httpGet:
+          #     path: /health
+          #     port: 80
+          #   initialDelaySeconds: 0
+          #   periodSeconds: 10
+          #   timeoutSeconds: 5
+          #   failureThreshold: 30  # Até 5 minutos para iniciar
+          
+          # ===========================================
+          # Volumes (se necessário)
+          # ===========================================
+          # volumeMounts:
+          #   - name: config-volume
+          #     mountPath: /app/config
+          #     readOnly: true
+          
+          # ===========================================
+          # Lifecycle Hooks
+          # ===========================================
+          # lifecycle:
+          #   preStop:
+          #     exec:
+          #       command: ["/bin/sh", "-c", "sleep 15"]
+      
+      # ===========================================
+      # Init Containers
+      # ===========================================
+      # initContainers:
+      #   - name: wait-for-db
+      #     image: busybox:1.35
+      #     command: ['sh', '-c', 'until nc -z postgres-service 5432; do echo waiting for db; sleep 2; done;']
+      
+      # ===========================================
+      # Volumes (se necessário)
+      # ===========================================
+      # volumes:
+      #   - name: config-volume
+      #     configMap:
+      #       name: app-config
+      
+      # ===========================================
+      # Node Selection
+      # ===========================================
+      # nodeSelector:
+      #   disktype: ssd
+      #   environment: production
+      
+      # ===========================================
+      # Affinity Rules
+      # ===========================================
+      # affinity:
+      #   podAntiAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       - labelSelector:
+      #           matchExpressions:
+      #             - key: app
+      #               operator: In
+      #               values:
+      #                 - vehicle-sales-api
+      #         topologyKey: kubernetes.io/hostname
+      
+      # ===========================================
+      # Tolerations
+      # ===========================================
+      # tolerations:
+      #   - key: "dedicated"
+      #     operator: "Equal"
+      #     value: "api"
+      #     effect: "NoSchedule"
+      
+      # ===========================================
+      # DNS Policy
+      # ===========================================
+      dnsPolicy: ClusterFirst
+      
+      # ===========================================
+      # Restart Policy
+      # ===========================================
+      restartPolicy: Always
+      
+      # ===========================================
+      #
