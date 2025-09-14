@@ -1,13 +1,13 @@
 # ===========================================
-# PVC - Persistent Volume Claim para PostgreSQL
+# PVC - Persistent Volume Claim para MongoDB
 # ===========================================
 # Solicita armazenamento persistente para o banco de dados
 
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  # Nome do PVC que será referenciado pelo Deployment do PostgreSQL
-  name: postgres-pvc
+  # Nome do PVC que será referenciado pelo Deployment do MongoDB
+  name: mongodb-pvc
   
   # Namespace onde o PVC será criado
   namespace: vehicle-sales
@@ -26,7 +26,7 @@ spec:
   # ReadOnlyMany (ROX) = volume pode ser montado read-only por vários nodes
   # ReadWriteMany (RWX) = volume pode ser montado read-write por vários nodes
   accessModes:
-    - ReadWriteOnce  # PostgreSQL precisa de acesso exclusivo
+    - ReadWriteOnce  # MongoDB precisa de acesso exclusivo
   
   # ===========================================
   # Recursos Solicitados

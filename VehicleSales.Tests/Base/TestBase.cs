@@ -1,19 +1,23 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using VehicleSales.Infrastructure.Data;
+using MongoDB.Driver;
 using VehicleSales.Domain.Interfaces;
 using VehicleSales.Infrastructure.Repositories;
-using System.Reflection;
+using VehicleSales.Application.Gateways;
+using VehicleSales.Infrastructure.Gateways;
+using VehicleSales.Application.Presenters;
+using VehicleSales.Application.Controllers;
 using VehicleSales.Domain.Entities;
+using VehicleSales.Domain.Enums;
+using VehicleSales.Tests.Mocks;
 
 namespace VehicleSales.Tests.Base;
 
 public abstract class TestBase
 {
     protected readonly IServiceProvider _serviceProvider;
-    protected readonly ApplicationDbContext _db;
+    protected readonly IMongoDatabase _database;
     protected readonly IConfiguration _configuration;
     protected readonly ILogger _logger;
 
@@ -23,28 +27,39 @@ public abstract class TestBase
         _configuration = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile("appsettings.Test.json", optional: true)
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                {"MongoDbSettings:DatabaseName", $"vehicle_sales_test_{Guid.NewGuid():N}"}
+            })
             .Build();
 
         var services = new ServiceCollection();
         
-        // DbContext com InMemory
-        services.AddDbContext<ApplicationDbContext>(options =>
+        // MongoDB InMemory (usando MongoDB.Driver.Core.TestHelpers ou Testcontainers)
+        // Para simplicidade, usaremos uma instância local com nome único
+        services.AddSingleton<IMongoClient>(serviceProvider =>
         {
-            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString());
-            options.EnableSensitiveDataLogging();
-            options.EnableDetailedErrors();
+            var connectionString = "mongodb://localhost:27017"; // ou usar Testcontainers
+            return new MongoClient(connectionString);
         });
 
-        // Repositories e Unit of Work
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<IVehicleRepository, VehicleRepository>();
-        
-
-        // MediatR
-        services.AddMediatR(cfg =>
+        services.AddScoped<IMongoDatabase>(serviceProvider =>
         {
-            cfg.RegisterServicesFromAssembly(Assembly.Load("VehicleSales.Application"));
+            var client = serviceProvider.GetRequiredService<IMongoClient>();
+            var databaseName = _configuration.GetValue<string>("MongoDbSettings:DatabaseName");
+            return client.GetDatabase(databaseName);
         });
+
+        // Repositories
+        services.AddScoped<IVehicleSaleRepository, VehicleSaleRepository>();
+
+        // Clean Architecture Services
+        services.AddScoped<ISaleGateway, SaleGateway>();
+        services.AddScoped<ISalePresenter, SalePresenter>();
+        services.AddScoped<SaleUseCaseController>();
+
+        // Mock do VehicleCatalogService para testes
+        services.AddScoped<IVehicleCatalogService, MockVehicleCatalogService>();
 
         // Logging
         services.AddLogging(builder =>
@@ -58,7 +73,7 @@ public abstract class TestBase
 
         // Build do provider
         _serviceProvider = services.BuildServiceProvider();
-        _db = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+        _database = _serviceProvider.GetRequiredService<IMongoDatabase>();
         _logger = _serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(GetType().Name);
     }
 
@@ -69,116 +84,162 @@ public abstract class TestBase
     }
 
     /// <summary>
+    /// Limpar a collection antes de cada teste
+    /// </summary>
+    protected async Task CleanDatabaseAsync()
+    {
+        var collection = _database.GetCollection<VehicleSale>("vehicle_sales");
+        await collection.DeleteManyAsync(FilterDefinition<VehicleSale>.Empty);
+    }
+
+    /// <summary>
     /// Criar dados básicos para testes
     /// </summary>
-    protected async Task<List<Vehicle>> SeedBasicDataAsync()
+    protected async Task<List<VehicleSale>> SeedBasicDataAsync()
     {
+        await CleanDatabaseAsync();
+
         using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var repository = scope.ServiceProvider.GetRequiredService<IVehicleSaleRepository>();
 
-        // Limpar dados existentes
-        context.RemoveRange(context.Vehicles);
-        await context.SaveChangesAsync();
-
-        // Criar veículos usando SEU construtor
-        var vehicles = new List<Vehicle>
+        // Criar vendas usando o construtor correto
+        var sales = new List<VehicleSale>
         {
-            new Vehicle("Toyota", "Corolla", 2022, "Prata", 85000.00m),
-            new Vehicle("Ford", "Focus", 2021, "Preto", 70000.00m),
-            new Vehicle("BMW", "X1", 2023, "Branco", 180000.00m),
-            new Vehicle("Honda", "Civic", 2022, "Azul", 95000.00m),
-            new Vehicle("Nissan", "Sentra", 2021, "Cinza", 80000.00m)
+            new VehicleSale(Guid.NewGuid(), "12345678901", "João Silva", "joao@email.com", 85000.00m,
+                new VehicleSnapshot { Brand = "Toyota", Model = "Corolla", Year = 2022, Color = "Prata", OriginalPrice = 85000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "98765432100", "Maria Santos", "maria@email.com", 70000.00m,
+                new VehicleSnapshot { Brand = "Ford", Model = "Focus", Year = 2021, Color = "Preto", OriginalPrice = 70000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "11122233344", "Carlos Lima", "carlos@email.com", 180000.00m,
+                new VehicleSnapshot { Brand = "BMW", Model = "X1", Year = 2023, Color = "Branco", OriginalPrice = 180000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "55566677788", "Ana Costa", "ana@email.com", 95000.00m,
+                new VehicleSnapshot { Brand = "Honda", Model = "Civic", Year = 2022, Color = "Azul", OriginalPrice = 95000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "99988877766", "Pedro Oliveira", "pedro@email.com", 80000.00m,
+                new VehicleSnapshot { Brand = "Nissan", Model = "Sentra", Year = 2021, Color = "Cinza", OriginalPrice = 80000.00m })
         };
 
-        context.Vehicles.AddRange(vehicles);
-        await context.SaveChangesAsync();
+        foreach (var sale in sales)
+        {
+            await repository.CreateAsync(sale);
+        }
 
-        _logger.LogInformation($"✅ Seed básico: {vehicles.Count} veículos criados");
-        return vehicles;
+        _logger.LogInformation($"Seed básico: {sales.Count} vendas criadas");
+        return sales;
     }
 
     /// <summary>
-    /// Criar cenário com veículos vendidos e disponíveis
+    /// Criar cenário com vendas com status diferentes
     /// </summary>
-    protected async Task<(List<Vehicle> Available, List<Vehicle> Sold)> SeedMixedDataAsync()
+    protected async Task<(List<VehicleSale> Pending, List<VehicleSale> Paid)> SeedMixedStatusAsync()
     {
+        await CleanDatabaseAsync();
+
         using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var repository = scope.ServiceProvider.GetRequiredService<IVehicleSaleRepository>();
 
-        // Limpar dados
-        context.RemoveRange(context.Vehicles);
-        await context.SaveChangesAsync();
-
-        // Veículos disponíveis
-        var availableVehicles = new List<Vehicle>
+        // Vendas pendentes
+        var pendingSales = new List<VehicleSale>
         {
-            new Vehicle("Toyota", "Corolla", 2022, "Prata", 85000.00m),
-            new Vehicle("Ford", "Focus", 2021, "Preto", 70000.00m),
-            new Vehicle("Volkswagen", "Polo", 2023, "Branco", 65000.00m)
+            new VehicleSale(Guid.NewGuid(), "12345678901", "João Silva", "joao@email.com", 85000.00m,
+                new VehicleSnapshot { Brand = "Toyota", Model = "Corolla", Year = 2022, Color = "Prata", OriginalPrice = 85000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "98765432100", "Maria Santos", "maria@email.com", 70000.00m,
+                new VehicleSnapshot { Brand = "Ford", Model = "Focus", Year = 2021, Color = "Preto", OriginalPrice = 70000.00m })
         };
 
-        // Veículos vendidos
-        var soldVehicles = new List<Vehicle>
+        // Vendas pagas
+        var paidSales = new List<VehicleSale>
         {
-            new Vehicle("BMW", "X1", 2023, "Azul", 180000.00m),
-            new Vehicle("Honda", "Civic", 2022, "Vermelho", 95000.00m)
+            new VehicleSale(Guid.NewGuid(), "11122233344", "Carlos Lima", "carlos@email.com", 180000.00m,
+                new VehicleSnapshot { Brand = "BMW", Model = "X1", Year = 2023, Color = "Azul", OriginalPrice = 180000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "55566677788", "Ana Costa", "ana@email.com", 95000.00m,
+                new VehicleSnapshot { Brand = "Honda", Model = "Civic", Year = 2022, Color = "Vermelho", OriginalPrice = 95000.00m })
         };
 
-        // Registrar vendas
-        soldVehicles[0].RegisterSale("11111111111", "PAY-BMW001");
-        soldVehicles[1].RegisterSale("22222222222", "PAY-HONDA001");
+        // Atualizar status das vendas pagas
+        foreach (var sale in paidSales)
+        {
+            sale.UpdatePaymentStatus(PaymentStatus.Paid);
+        }
 
-        // Salvar todos
-        var allVehicles = availableVehicles.Concat(soldVehicles).ToList();
-        context.Vehicles.AddRange(allVehicles);
-        await context.SaveChangesAsync();
+        // Salvar todas
+        var allSales = pendingSales.Concat(paidSales).ToList();
+        foreach (var sale in allSales)
+        {
+            await repository.CreateAsync(sale);
+        }
 
-        _logger.LogInformation($"✅ Seed misto: {availableVehicles.Count} disponíveis, {soldVehicles.Count} vendidos");
-        return (availableVehicles, soldVehicles);
+        _logger.LogInformation($"Seed misto: {pendingSales.Count} pendentes, {paidSales.Count} pagas");
+        return (pendingSales, paidSales);
     }
 
     /// <summary>
-    /// Criar veículos para teste de ordenação por preço
+    /// Criar vendas para teste de ordenação por preço
     /// </summary>
-    protected async Task<List<Vehicle>> SeedPriceOrderTestAsync()
+    protected async Task<List<VehicleSale>> SeedPriceOrderTestAsync()
     {
+        await CleanDatabaseAsync();
+
         using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var repository = scope.ServiceProvider.GetRequiredService<IVehicleSaleRepository>();
 
-        context.RemoveRange(context.Vehicles);
-        await context.SaveChangesAsync();
-
-        var vehicles = new List<Vehicle>
+        var sales = new List<VehicleSale>
         {
-            new Vehicle("BMW", "X3", 2023, "Branco", 250000.00m),      // Mais caro
-            new Vehicle("Ford", "Ka", 2021, "Vermelho", 45000.00m),    // Mais barato  
-            new Vehicle("Toyota", "Corolla", 2022, "Prata", 85000.00m), // Meio
-            new Vehicle("Honda", "Civic", 2022, "Azul", 95000.00m),    // Meio-alto
-            new Vehicle("Fiat", "Uno", 2020, "Branco", 35000.00m)      // Mais barato ainda
+            new VehicleSale(Guid.NewGuid(), "11111111111", "Cliente 1", "cliente1@email.com", 250000.00m,
+                new VehicleSnapshot { Brand = "BMW", Model = "X3", Year = 2023, Color = "Branco", OriginalPrice = 250000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "22222222222", "Cliente 2", "cliente2@email.com", 45000.00m,
+                new VehicleSnapshot { Brand = "Ford", Model = "Ka", Year = 2021, Color = "Vermelho", OriginalPrice = 45000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "33333333333", "Cliente 3", "cliente3@email.com", 85000.00m,
+                new VehicleSnapshot { Brand = "Toyota", Model = "Corolla", Year = 2022, Color = "Prata", OriginalPrice = 85000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "44444444444", "Cliente 4", "cliente4@email.com", 95000.00m,
+                new VehicleSnapshot { Brand = "Honda", Model = "Civic", Year = 2022, Color = "Azul", OriginalPrice = 95000.00m }),
+            
+            new VehicleSale(Guid.NewGuid(), "55555555555", "Cliente 5", "cliente5@email.com", 35000.00m,
+                new VehicleSnapshot { Brand = "Fiat", Model = "Uno", Year = 2020, Color = "Branco", OriginalPrice = 35000.00m })
         };
 
-        context.Vehicles.AddRange(vehicles);
-        await context.SaveChangesAsync();
+        foreach (var sale in sales)
+        {
+            await repository.CreateAsync(sale);
+        }
 
-        _logger.LogInformation($"✅ Seed para ordenação: {vehicles.Count} veículos com preços variados");
-        return vehicles;
+        _logger.LogInformation($"Seed para ordenação: {sales.Count} vendas com preços variados");
+        return sales;
     }
 
     /// <summary>
     /// Simular webhook de pagamento
     /// </summary>
-    protected async Task<Vehicle> SimulatePaymentWebhookAsync(string paymentCode, VehicleSales.Domain.Enums.PaymentStatus status)
+    protected async Task<VehicleSale?> SimulatePaymentWebhookAsync(string paymentCode, PaymentStatus status)
     {
         using var scope = _serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var repository = scope.ServiceProvider.GetRequiredService<IVehicleSaleRepository>();
 
-        var vehicle = await context.Vehicles.FirstOrDefaultAsync(v => v.PaymentCode == paymentCode);
-        if (vehicle != null)
+        var sale = await repository.GetByPaymentCodeAsync(paymentCode);
+        if (sale != null)
         {
-            vehicle.UpdatePaymentStatus(paymentCode, status);
-            await context.SaveChangesAsync();
-            _logger.LogInformation($"🔗 Webhook simulado: {paymentCode} → {status}");
+            sale.UpdatePaymentStatus(status);
+            await repository.UpdateAsync(sale);
+            _logger.LogInformation($"Webhook simulado: {paymentCode} → {status}");
         }
-        return vehicle;
+        return sale;
+    }
+
+    /// <summary>
+    /// Limpar banco após os testes
+    /// </summary>
+    protected async Task TearDownAsync()
+    {
+        await CleanDatabaseAsync();
+        
+        // Para testes, pode dropar o database inteiro
+        await _database.Client.DropDatabaseAsync(_database.DatabaseNamespace.DatabaseName);
     }
 }

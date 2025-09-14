@@ -1,30 +1,29 @@
 # ===========================================
-# DEPLOYMENT - PostgreSQL Database
+# DEPLOYMENT - MongoDB Database
 # ===========================================
-
 
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   # Nome do Deployment
-  name: postgres
+  name: mongodb
   
   # Namespace onde será criado
   namespace: vehicle-sales
   
   # Labels para organização e seleção
   labels:
-    app: postgres
+    app: mongodb
     component: database
     tier: data
-    version: "16"
+    version: "7"
 
 spec:
   # ===========================================
   # Configuração de Réplicas
   # ===========================================
-  # PostgreSQL básico suporta apenas 1 réplica
-  # Para HA, use PostgreSQL com replicação ou operadores
+  # MongoDB básico suporta apenas 1 réplica
+  # Para HA, use MongoDB Replica Set ou operadores
   replicas: 1
   
   # ===========================================
@@ -41,7 +40,7 @@ spec:
   # Define quais pods este Deployment gerencia
   selector:
     matchLabels:
-      app: postgres
+      app: mongodb
       component: database
   
   # ===========================================
@@ -51,7 +50,7 @@ spec:
     metadata:
       # Labels do Pod (devem corresponder ao selector)
       labels:
-        app: postgres
+        app: mongodb
         component: database
         tier: data
     
@@ -60,13 +59,13 @@ spec:
       # Containers
       # ===========================================
       containers:
-        - name: postgres
+        - name: mongodb
           
-          # Imagem do PostgreSQL
-          # 16-alpine = versão 16 com Alpine Linux (menor)
-          # 16 = versão 16 com Debian (maior, mais ferramentas)
+          # Imagem do MongoDB
+          # 7-jammy = versão 7 com Ubuntu Jammy (recomendado)
+          # 7 = versão 7 com Debian (maior, mais ferramentas)
           # latest = última versão (não use em produção!)
-          image: postgres:16-alpine
+          image: mongo:7-jammy
           
           # Política de pull da imagem
           # Always = sempre baixa a imagem
@@ -78,54 +77,50 @@ spec:
           # Portas
           # ===========================================
           ports:
-            - containerPort: 5432      # Porta padrão do PostgreSQL
-              name: postgres           # Nome da porta para referência
+            - containerPort: 27017     # Porta padrão do MongoDB
+              name: mongodb            # Nome da porta para referência
               protocol: TCP            # Protocolo TCP
           
           # ===========================================
           # Variáveis de Ambiente
           # ===========================================
           env:
-            # Usuário administrador do PostgreSQL
-            - name: POSTGRES_USER
+            # Usuário administrador root do MongoDB
+            - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: vehicle-sales-secrets
                   key: db-username
             
-            # Senha do usuário administrador
-            - name: POSTGRES_PASSWORD
+            # Senha do usuário administrador root
+            - name: MONGO_INITDB_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: vehicle-sales-secrets
                   key: db-password
             
             # Nome do banco de dados inicial
-            - name: POSTGRES_DB
+            - name: MONGO_INITDB_DATABASE
               valueFrom:
                 secretKeyRef:
                   name: vehicle-sales-secrets
                   key: db-name
             
-            # Diretório onde PostgreSQL armazena dados
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
-            
             # Configurações de performance (opcional)
-            - name: POSTGRES_INITDB_ARGS
-              value: "--encoding=UTF8 --locale=C"
+            # - name: MONGO_INITDB_ARGS
+            #   value: "--auth"
             
             # Configurações adicionais (opcional)
-            # - name: POSTGRES_HOST_AUTH_METHOD
-            #   value: "scram-sha-256"  # Método de autenticação
+            # - name: MONGODB_DISABLE_SYSTEM_LOG
+            #   value: "false"  # Habilita logs do sistema
           
           # ===========================================
           # Volumes
           # ===========================================
           volumeMounts:
             # Volume para dados persistentes
-            - name: postgres-storage
-              mountPath: /var/lib/postgresql/data
+            - name: mongodb-storage
+              mountPath: /data/db
             
             # Volume para scripts de inicialização (opcional)
             # - name: init-scripts
@@ -138,12 +133,12 @@ spec:
           resources:
             # Recursos mínimos garantidos
             requests:
-              memory: "256Mi"   # 256MB RAM mínimo
+              memory: "512Mi"   # 512MB RAM mínimo (MongoDB precisa mais que PostgreSQL)
               cpu: "250m"       # 0.25 CPU cores
             
             # Recursos máximos permitidos
             limits:
-              memory: "1Gi"     # 1GB RAM máximo
+              memory: "2Gi"     # 2GB RAM máximo (MongoDB usa mais memória)
               cpu: "1000m"      # 1 CPU core máximo
           
           # ===========================================
@@ -155,9 +150,9 @@ spec:
           livenessProbe:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
             initialDelaySeconds: 30    # Aguarda 30s após iniciar
             periodSeconds: 10          # Verifica a cada 10s
             timeoutSeconds: 5          # Timeout de 5s
@@ -169,9 +164,9 @@ spec:
           readinessProbe:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+                - mongosh
+                - --eval
+                - "db.adminCommand('ping')"
             initialDelaySeconds: 5     # Aguarda 5s após iniciar
             periodSeconds: 5           # Verifica a cada 5s
             timeoutSeconds: 3          # Timeout de 3s
@@ -182,9 +177,9 @@ spec:
           # startupProbe:
           #   exec:
           #     command:
-          #       - /bin/sh
-          #       - -c
-          #       - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+          #       - mongosh
+          #       - --eval
+          #       - "db.adminCommand('ping')"
           #   initialDelaySeconds: 0
           #   periodSeconds: 10
           #   timeoutSeconds: 5
@@ -195,11 +190,11 @@ spec:
       # ===========================================
       volumes:
         # Volume persistente para dados
-        - name: postgres-storage
+        - name: mongodb-storage
           persistentVolumeClaim:
-            claimName: postgres-pvc
+            claimName: mongodb-pvc
         
         # Volume para scripts de inicialização (opcional)
         # - name: init-scripts
         #   configMap:
-        #     name: postgres-init-scripts
+        #     name: mongodb-init-scripts

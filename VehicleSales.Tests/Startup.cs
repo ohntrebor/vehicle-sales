@@ -1,13 +1,13 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using VehicleSales.Domain.Interfaces;
-using VehicleSales.Infrastructure.Data;
 using VehicleSales.Infrastructure.Repositories;
 using VehicleSales.Application.Gateways;
 using VehicleSales.Infrastructure.Gateways;
 using VehicleSales.Application.Presenters;
 using VehicleSales.Application.Controllers;
+using VehicleSales.Tests.Mocks;
 
 namespace VehicleSales.Tests;
 
@@ -19,29 +19,42 @@ public class Startup
     {
         var builder = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.Test.json", optional: true, reloadOnChange: true);
+            .AddJsonFile("appsettings.Test.json", optional: true, reloadOnChange: true)
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                {"ConnectionStrings:MongoDb", "mongodb+srv://vehicle-sales:<db_password>@vehicle-sales.rx54kko.mongodb.net/"},
+                {"MongoDbSettings:DatabaseName", "vehicle_sales_test"}
+            });
         
         Configuration = builder.Build();
     }
     
     public void ConfigureServices(IServiceCollection services)
     {
-        // DbContext com InMemory
-        services.AddDbContext<ApplicationDbContext>(options =>
+        // MongoDB Configuration
+        services.AddSingleton<IMongoClient>(serviceProvider =>
         {
-            options.UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString());
-            options.EnableSensitiveDataLogging();
-            options.EnableDetailedErrors();
+            var connectionString = Configuration.GetConnectionString("MongoDb");
+            return new MongoClient(connectionString);
+        });
+
+        services.AddScoped<IMongoDatabase>(serviceProvider =>
+        {
+            var client = serviceProvider.GetRequiredService<IMongoClient>();
+            var databaseName = $"vehicle_sales_test_{Guid.NewGuid():N}"; // Database único por teste
+            return client.GetDatabase(databaseName);
         });
         
-        // Repositories e Unit of Work 
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<IVehicleRepository, VehicleRepository>();
+        // Repositories
+        services.AddScoped<IVehicleSaleRepository, VehicleSaleRepository>();
         
-        // Clean Architecture
-        services.AddScoped<IVehicleGateway, VehicleGateway>();
-        services.AddScoped<IVehiclePresenter, VehiclePresenter>();
-        services.AddScoped<VehicleUseCaseController>();
+        // Clean Architecture Services
+        services.AddScoped<ISaleGateway, SaleGateway>();
+        services.AddScoped<ISalePresenter, SalePresenter>();
+        services.AddScoped<SaleUseCaseController>();
+        
+        // Mock do VehicleCatalogService para testes
+        services.AddScoped<IVehicleCatalogService, MockVehicleCatalogService>();
         
         // Logging
         services.AddLogging();

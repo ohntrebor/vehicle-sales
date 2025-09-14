@@ -1,25 +1,25 @@
 # ===========================================
-# SERVICE - Expõe o PostgreSQL internamente
+# SERVICE - Expõe o MongoDB internamente
 # ===========================================
 
 apiVersion: v1
 kind: Service
 metadata:
   # Nome do Service (usado como hostname interno)
-  name: postgres-service
+  name: mongodb-service
   
   # Namespace onde será criado
   namespace: vehicle-sales
   
   # Labels para organização
   labels:
-    app: postgres
+    app: mongodb
     component: database
     tier: data
   
   # Annotations para configurações específicas
   annotations:
-    description: "Service interno para PostgreSQL"
+    description: "Service interno para MongoDB"
 
 spec:
   # ===========================================
@@ -36,20 +36,20 @@ spec:
   # ===========================================
   # Define quais pods receberão tráfego deste service
   selector:
-    app: postgres
+    app: mongodb
     component: database
   
   # ===========================================
   # Portas
   # ===========================================
   ports:
-    - name: postgres           # Nome da porta (referência)
-      port: 5432              # Porta do Service
-      targetPort: 5432        # Porta do Container
+    - name: mongodb            # Nome da porta (referência)
+      port: 27017             # Porta do Service
+      targetPort: 27017       # Porta do Container
       protocol: TCP           # Protocolo (TCP/UDP/SCTP)
       
       # NodePort específico (apenas se type: NodePort)
-      # nodePort: 30432
+      # nodePort: 30017
   
   # ===========================================
   # Session Affinity 

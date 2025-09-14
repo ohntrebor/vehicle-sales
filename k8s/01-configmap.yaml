@@ -48,3 +48,26 @@ data:
   HEALTH_CHECK_PATH: "/health"
   LIVENESS_PATH: "/health/live"
   READINESS_PATH: "/health/ready"
+  
+  # ===========================================
+  # Configurações específicas do MongoDB
+  # ===========================================
+  
+  # Nome do database MongoDB
+  MONGODB_DATABASE_NAME: "vehicle_sales_db"
+  
+  # Timeout de conexão MongoDB em segundos
+  MONGODB_CONNECTION_TIMEOUT: "30"
+  
+  # Timeout de operação MongoDB em segundos
+  MONGODB_OPERATION_TIMEOUT: "60"
+  
+  # ===========================================
+  # Configurações de Serviços Externos
+  # ===========================================
+  
+  # URL da API do VehicleCatalog
+  VEHICLE_CATALOG_API_URL: "http://localhost:5000/api"
+  
+  # Timeout para chamadas externas em segundos
+  EXTERNAL_API_TIMEOUT: "30"
