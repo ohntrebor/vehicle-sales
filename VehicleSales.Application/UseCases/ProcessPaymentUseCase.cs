@@ -11,21 +11,31 @@ public class ProcessPaymentUseCase(ISaleGateway gateway, IVehicleCatalogService 
         var sale = await gateway.FindByPaymentCodeAsync(paymentCode);
         if (sale == null) return false;
 
-        // Atualizar status local
-        if (Enum.TryParse<PaymentStatus>(status, out var paymentStatus))
+        // Mapear status recebido para PaymentStatus
+        var paymentStatus = MapStringToPaymentStatus(status);
+        if (paymentStatus == null) return false;
+
+        sale.UpdatePaymentStatus(paymentStatus.Value);
+        await gateway.UpdateSaleAsync(sale);
+
+        // Se pagamento aprovado, notificar o serviço de catálogo
+        if (paymentStatus == PaymentStatus.Paid)
         {
-            sale.UpdatePaymentStatus(paymentStatus);
-            await gateway.UpdateSaleAsync(sale);
-
-            // Se pagamento aprovado, notificar o serviço de catálogo
-            if (paymentStatus == PaymentStatus.Paid)
-            {
-                await catalogService.NotifyVehicleSoldAsync(sale.VehicleId, paymentCode, status);
-            }
-
-            return true;
+            await catalogService.NotifyVehicleSoldAsync(sale.VehicleId, paymentCode, status);
         }
 
-        return false;
+        return true;
+    }
+
+    private PaymentStatus? MapStringToPaymentStatus(string status)
+    {
+        return status?.ToLowerInvariant() switch
+        {
+           "0" or "pending" or "processing" => PaymentStatus.Pending,
+           "1" or "confirmed" or "paid" or "approved" => PaymentStatus.Paid,
+           "2" or"cancelled" or "canceled" => PaymentStatus.Cancelled,
+           "3" or "failed" or "rejected" or "declined" => PaymentStatus.Failed,
+            _ => null
+        };
     }
 }
