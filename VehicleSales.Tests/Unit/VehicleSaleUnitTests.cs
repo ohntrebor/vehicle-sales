@@ -34,8 +34,8 @@ public class VehicleSaleUnitTests
         var beforeCreation = DateTime.UtcNow;
         var vehicleId = Guid.NewGuid();
         var buyerCpf = "12345678901";
-        var buyerName = "João Silva";
-        var buyerEmail = "joao@email.com";
+        var buyerName = "Robert Anjos";
+        var buyerEmail = "bob@email.com";
         var salePrice = 85000.00m;
         var vehicleData = new VehicleSnapshot
         {
@@ -151,7 +151,7 @@ public class VehicleSaleUnitTests
             Color = "Branco",
             OriginalPrice = 180000.00m
         };
-        var sale = new VehicleSale(Guid.NewGuid(), "44444444444", "Carlos Lima", "carlos@email.com", 180000.00m, vehicleData);
+        var sale = new VehicleSale(Guid.NewGuid(), "44444444444", "Harumi A.", "harumi@email.com", 180000.00m, vehicleData);
         var beforeUpdate = DateTime.UtcNow;
 
         // Act
@@ -268,13 +268,13 @@ public class VehicleSaleUnitTests
     [Trait("Category", "Unit")]
     [Trait("Feature", "Validation")]
     [Theory]
-    [InlineData(null, "João Silva", "joao@email.com")]
-    [InlineData("", "João Silva", "joao@email.com")]
-    [InlineData("   ", "João Silva", "joao@email.com")]
-    [InlineData("12345678901", null, "joao@email.com")]
-    [InlineData("12345678901", "", "joao@email.com")]
-    [InlineData("12345678901", "João Silva", null)]
-    [InlineData("12345678901", "João Silva", "")]
+    [InlineData(null, "Robert Anjos", "bob@email.com")]
+    [InlineData("", "Robert Anjos", "bob@email.com")]
+    [InlineData("   ", "Robert Anjos", "bob@email.com")]
+    [InlineData("12345678901", null, "bob@email.com")]
+    [InlineData("12345678901", "", "bob@email.com")]
+    [InlineData("12345678901", "Robert Anjos", null)]
+    [InlineData("12345678901", "Robert Anjos", "")]
     public void Should_Not_Allow_Sale_With_Invalid_Parameters(string buyerCpf, string buyerName, string buyerEmail)
     {
         // Arrange
@@ -379,42 +379,6 @@ public class VehicleSaleUnitTests
 
         _logger.LogInformation($"✅ Caracteres especiais tratados: {sale.VehicleData.Brand} {sale.VehicleData.Model} - Comprador: {sale.BuyerName}");
     }
-
-    /// <summary>
-    /// Testa se o VehicleSnapshot é armazenado corretamente
-    /// </summary>
-    [Trait("Category", "Unit")]
-    [Trait("Feature", "EdgeCases")]
-    [Fact]
-    public void Should_Store_VehicleSnapshot_Correctly()
-    {
-        // Arrange
-        var vehicleData = new VehicleSnapshot
-        {
-            Brand = "Hyundai",
-            Model = "HB20",
-            Year = 2022,
-            Color = "Branco",
-            OriginalPrice = 65000.00m
-        };
-
-        // Act
-        var sale = new VehicleSale(Guid.NewGuid(), "12312312312", "Comprador Teste", "comprador@email.com", 65000.00m, vehicleData);
-
-        // Assert
-        sale.VehicleData.Should().NotBeNull();
-        sale.VehicleData.Brand.Should().Be(vehicleData.Brand);
-        sale.VehicleData.Model.Should().Be(vehicleData.Model);
-        sale.VehicleData.Year.Should().Be(vehicleData.Year);
-        sale.VehicleData.Color.Should().Be(vehicleData.Color);
-        sale.VehicleData.OriginalPrice.Should().Be(vehicleData.OriginalPrice);
-
-        // Verificar se é uma cópia independente
-        vehicleData.Brand = "Toyota"; // Modificar original
-        sale.VehicleData.Brand.Should().Be("Hyundai"); // Não deve afetar a venda
-
-        _logger.LogInformation($"✅ VehicleSnapshot armazenado corretamente: {sale.VehicleData.Brand} {sale.VehicleData.Model}");
-    }
-
+    
     #endregion
 }

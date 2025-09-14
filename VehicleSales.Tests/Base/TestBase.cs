@@ -105,13 +105,13 @@ public abstract class TestBase
         // Criar vendas usando o construtor correto
         var sales = new List<VehicleSale>
         {
-            new VehicleSale(Guid.NewGuid(), "12345678901", "João Silva", "joao@email.com", 85000.00m,
+            new VehicleSale(Guid.NewGuid(), "12345678901", "Robert Anjos", "bob@email.com", 85000.00m,
                 new VehicleSnapshot { Brand = "Toyota", Model = "Corolla", Year = 2022, Color = "Prata", OriginalPrice = 85000.00m }),
             
             new VehicleSale(Guid.NewGuid(), "98765432100", "Maria Santos", "maria@email.com", 70000.00m,
                 new VehicleSnapshot { Brand = "Ford", Model = "Focus", Year = 2021, Color = "Preto", OriginalPrice = 70000.00m }),
             
-            new VehicleSale(Guid.NewGuid(), "11122233344", "Carlos Lima", "carlos@email.com", 180000.00m,
+            new VehicleSale(Guid.NewGuid(), "11122233344", "Harumi A.", "harumi@email.com", 180000.00m,
                 new VehicleSnapshot { Brand = "BMW", Model = "X1", Year = 2023, Color = "Branco", OriginalPrice = 180000.00m }),
             
             new VehicleSale(Guid.NewGuid(), "55566677788", "Ana Costa", "ana@email.com", 95000.00m,
@@ -143,7 +143,7 @@ public abstract class TestBase
         // Vendas pendentes
         var pendingSales = new List<VehicleSale>
         {
-            new VehicleSale(Guid.NewGuid(), "12345678901", "João Silva", "joao@email.com", 85000.00m,
+            new VehicleSale(Guid.NewGuid(), "12345678901", "Robert Anjos", "bob@email.com", 85000.00m,
                 new VehicleSnapshot { Brand = "Toyota", Model = "Corolla", Year = 2022, Color = "Prata", OriginalPrice = 85000.00m }),
             
             new VehicleSale(Guid.NewGuid(), "98765432100", "Maria Santos", "maria@email.com", 70000.00m,
@@ -153,7 +153,7 @@ public abstract class TestBase
         // Vendas pagas
         var paidSales = new List<VehicleSale>
         {
-            new VehicleSale(Guid.NewGuid(), "11122233344", "Carlos Lima", "carlos@email.com", 180000.00m,
+            new VehicleSale(Guid.NewGuid(), "11122233344", "Harumi A.", "harumi@email.com", 180000.00m,
                 new VehicleSnapshot { Brand = "BMW", Model = "X1", Year = 2023, Color = "Azul", OriginalPrice = 180000.00m }),
             
             new VehicleSale(Guid.NewGuid(), "55566677788", "Ana Costa", "ana@email.com", 95000.00m,

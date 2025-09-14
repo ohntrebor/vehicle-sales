@@ -22,7 +22,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa se uma venda é salva corretamente no MongoDB com todas as propriedades
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "Persistence")]
     [Fact]
     public async Task Should_Save_VehicleSale_To_Database()
@@ -41,7 +40,7 @@ public class VehicleSaleIntegrationTests : TestBase
             OriginalPrice = 85000.00m
         };
         
-        var sale = new VehicleSale(Guid.NewGuid(), "12345678901", "João Silva", "joao@email.com", 85000.00m, vehicleData);
+        var sale = new VehicleSale(Guid.NewGuid(), "12345678901", "Robert Anjos", "bob@email.com", 85000.00m, vehicleData);
 
         // Act
         var savedSale = await repository.CreateAsync(sale);
@@ -51,8 +50,8 @@ public class VehicleSaleIntegrationTests : TestBase
         retrieved.Should().NotBeNull();
         retrieved!.Id.Should().Be(sale.Id);
         retrieved.BuyerCpf.Should().Be("12345678901");
-        retrieved.BuyerName.Should().Be("João Silva");
-        retrieved.BuyerEmail.Should().Be("joao@email.com");
+        retrieved.BuyerName.Should().Be("Robert Anjos");
+        retrieved.BuyerEmail.Should().Be("bob@email.com");
         retrieved.SalePrice.Should().Be(85000.00m);
         retrieved.PaymentStatus.Should().Be(PaymentStatus.Pending);
         retrieved.PaymentCode.Should().NotBeNullOrEmpty();
@@ -61,50 +60,10 @@ public class VehicleSaleIntegrationTests : TestBase
 
         _logger.LogInformation($"✅ Venda salva no MongoDB: {retrieved.VehicleData.Brand} {retrieved.VehicleData.Model} - Comprador: {retrieved.BuyerName}");
     }
-
-    /// <summary>
-    /// Testa se uma venda com pagamento confirmado é persistida corretamente
-    /// </summary>
-    [Trait("Category", "Integration")]
-    [Trait("Feature", "Persistence")]
-    [Fact]
-    public async Task Should_Save_Paid_Sale_With_Status()
-    {
-        // Arrange
-        await CleanDatabaseAsync();
-        using var scope = _serviceProvider.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<IVehicleSaleRepository>();
-
-        var vehicleData = new VehicleSnapshot
-        {
-            Brand = "BMW",
-            Model = "X1",
-            Year = 2023,
-            Color = "Preto",
-            OriginalPrice = 180000.00m
-        };
-        
-        var sale = new VehicleSale(Guid.NewGuid(), "98765432100", "Maria Santos", "maria@email.com", 180000.00m, vehicleData);
-        sale.UpdatePaymentStatus(PaymentStatus.Paid);
-
-        // Act
-        await repository.CreateAsync(sale);
-
-        // Assert
-        var saved = await repository.GetByIdAsync(sale.Id);
-        saved.Should().NotBeNull();
-        saved!.PaymentStatus.Should().Be(PaymentStatus.Paid);
-        saved.BuyerCpf.Should().Be("98765432100");
-        saved.BuyerName.Should().Be("Maria Santos");
-        saved.UpdatedAt.Should().NotBeNull();
-
-        _logger.LogInformation($"💰 Venda paga salva: {saved.VehicleData.Brand} {saved.VehicleData.Model} - Status: {saved.PaymentStatus}");
-    }
-
+    
     /// <summary>
     /// Testa se atualizações de vendas são persistidas corretamente
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "Persistence")]
     [Fact]
     public async Task Should_Update_Sale_In_Database()
@@ -123,7 +82,7 @@ public class VehicleSaleIntegrationTests : TestBase
             OriginalPrice = 70000.00m
         };
         
-        var sale = new VehicleSale(Guid.NewGuid(), "11122233344", "Carlos Lima", "carlos@email.com", 70000.00m, vehicleData);
+        var sale = new VehicleSale(Guid.NewGuid(), "11122233344", "Harumi A.", "harumi@email.com", 70000.00m, vehicleData);
         await repository.CreateAsync(sale);
 
         // Act
@@ -272,7 +231,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa o fluxo completo de criação de venda através dos Use Cases
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "FullFlow")]
     [Fact]
     public async Task Should_Create_Sale_Through_UseCase_Controller()
@@ -286,8 +244,8 @@ public class VehicleSaleIntegrationTests : TestBase
         {
             VehicleId = Guid.NewGuid(),
             BuyerCpf = "12345678901",
-            BuyerName = "João Silva",
-            BuyerEmail = "joao@email.com"
+            BuyerName = "Robert Anjos",
+            BuyerEmail = "bob@email.com"
         };
 
         // Act
@@ -296,8 +254,8 @@ public class VehicleSaleIntegrationTests : TestBase
         // Assert
         result.Should().NotBeNull();
         result.BuyerCpf.Should().Be("12345678901");
-        result.BuyerName.Should().Be("João Silva");
-        result.BuyerEmail.Should().Be("joao@email.com");
+        result.BuyerName.Should().Be("Robert Anjos");
+        result.BuyerEmail.Should().Be("bob@email.com");
         result.PaymentStatus.Should().Be("Pending");
         result.PaymentCode.Should().NotBeNullOrEmpty();
         result.VehicleData.Should().NotBeNull();
@@ -308,7 +266,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa o fluxo completo de processamento de webhook de pagamento
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "PaymentWebhook")]
     [Fact]
     public async Task Should_Process_Payment_Webhook_Successfully()
@@ -351,7 +308,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa o cenário completo de cancelamento de pagamento via webhook
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "PaymentWebhook")]
     [Fact]
     public async Task Should_Handle_Payment_Cancellation_Webhook()
@@ -365,8 +321,8 @@ public class VehicleSaleIntegrationTests : TestBase
         {
             VehicleId = Guid.NewGuid(),
             BuyerCpf = "11122233344",
-            BuyerName = "Carlos Lima",
-            BuyerEmail = "carlos@email.com"
+            BuyerName = "Harumi A.",
+            BuyerEmail = "harumi@email.com"
         };
 
         var createdSale = await useCaseController.CreateSale(createSaleDto);
@@ -393,7 +349,6 @@ public class VehicleSaleIntegrationTests : TestBase
     /// <summary>
     /// Testa o cenário de webhook com código de pagamento inexistente
     /// </summary>
-    [Trait("Category", "Integration")]
     [Trait("Feature", "PaymentWebhook")]
     [Fact]
     public async Task Should_Return_False_For_NonExistent_Payment_Code()

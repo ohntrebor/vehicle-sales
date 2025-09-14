@@ -6,7 +6,7 @@ namespace VehicleSales.Tests.Mocks;
 /// <summary>
 /// Mock do VehicleCatalogService para isolamento nos testes
 /// </summary>
-public abstract class MockVehicleCatalogService : IVehicleCatalogService
+public class MockVehicleCatalogService : IVehicleCatalogService
 {
     private readonly Dictionary<Guid, VehicleSnapshot> _mockVehicles = new()
     {
