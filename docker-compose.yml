@@ -43,9 +43,84 @@ services:
       start_period: 30s    # Aguarda 30s antes de começar
 
   # ===========================================
+  # SERVIÇO: PostgreSQL Database (para Vehicle Catalog)
+  # ===========================================
+  postgres:
+    # Imagem oficial do PostgreSQL 16
+    image: postgres:16-alpine
+    
+    # Nome do container para fácil identificação
+    container_name: vehicle-catalog-db
+    
+    # Variáveis de ambiente para configurar o PostgreSQL
+    environment:
+      - POSTGRES_USER=admin                      # Usuário do banco
+      - POSTGRES_PASSWORD=ra02xbo-P              # Senha do usuário
+      - POSTGRES_DB=vehicle-db                   # Nome do banco de dados
+      - PGDATA=/var/lib/postgresql/data/pgdata  # Diretório dos dados
+    
+    # Mapeamento de portas HOST:CONTAINER
+    ports:
+      - "5432:5432"                              # Porta padrão do PostgreSQL
+    
+    # Volume para persistir dados do banco
+    volumes:
+      - postgres-data:/var/lib/postgresql/data   # Dados persistem após restart
+    
+    # Rede interna para comunicação entre containers
+    networks:
+      - vehicle-sales-network
+    
+    # Healthcheck para verificar se o banco está pronto
+    healthcheck:
+      # Comando para testar conexão com o banco
+      test: ["CMD-SHELL", "pg_isready -U admin -d vehicle-db"]
+      interval: 10s        # Verifica a cada 10 segundos
+      timeout: 5s          # Timeout de 5 segundos
+      retries: 10          # Tenta 10 vezes
+      start_period: 30s    # Aguarda 30s antes de começar
+
+  # ===========================================
+  # SERVIÇO: Vehicle Catalog API
+  # ===========================================
+  vehicle-catalog-api:
+    # Imagem do GitHub Container Registry
+    image: ghcr.io/ohntrebor/vehicle-catalog:latest
+    
+    # Nome do container
+    container_name: vehicle-catalog-api
+    
+    # Variáveis de ambiente para a aplicação
+    environment:
+      # Ambiente de desenvolvimento (mostra erros detalhados)
+      - ASPNETCORE_ENVIRONMENT=Development
+      
+      # URL que a aplicação vai escutar
+      - ASPNETCORE_URLS=http://+:80
+      
+      # String de conexão PostgreSQL - usa nome do serviço 'postgres' como host
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=vehicle-db;Username=admin;Password=ra02xbo-P;Port=5432
+    
+    # Mapeamento de portas
+    ports:
+      - "5000:80"          # Acesse a API em http://localhost:5000
+    
+    # Dependências - só inicia após o PostgreSQL estar saudável
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    # Mesma rede para comunicação interna
+    networks:
+      - vehicle-sales-network
+    
+    # Política de restart
+    restart: unless-stopped    # Reinicia automaticamente se cair
+
+  # ===========================================
   # SERVIÇO: API .NET 8 VehicleSales
   # ===========================================
-  sales-api:
+  vehicle-sales-api:
     # Build da imagem usando o Dockerfile local
     build:
       context: .           # Contexto é a pasta atual
@@ -68,17 +143,19 @@ services:
       # Nome do database MongoDB
       - MongoDbSettings__DatabaseName=vehicle_sales_db
       
-      # URL da API externa do VehicleCatalog
-      - ExternalServices__VehicleCatalogApi=http://host.docker.internal:5000/api
+      # URL da API externa do VehicleCatalog - usa nome do serviço para comunicação interna
+      - ExternalServices__VehicleCatalogApi=http://vehicle-catalog:80/api
     
     # Mapeamento de portas
     ports:
       - "5001:80"          # Acesse a API em http://localhost:5001
     
-    # Dependências - só inicia após o MongoDB estar saudável
+    # Dependências - só inicia após o MongoDB estar saudável e vehicle-catalog estar disponível
     depends_on:
       mongodb:
         condition: service_healthy
+      vehicle-catalog:
+        condition: service_started
     
     # Mesma rede do banco para comunicação interna
     networks:
@@ -126,10 +203,14 @@ services:
 volumes:
   mongodb-data:                # Volume nomeado para dados do MongoDB
     driver: local              # Driver local do Docker
+  postgres-data:               # Volume nomeado para dados do PostgreSQL
+    driver: local              # Driver local do Docker
 
 # ===========================================
 # NETWORKS - Rede para Comunicação
 # ===========================================
 networks:
   vehicle-sales-network:      # Rede isolada para os serviços
+    driver: bridge             # Driver bridge
+  vehicle-catalog-network:    # Rede do vehicle-catalog (compatibilidade)
     driver: bridge             # Driver bridge

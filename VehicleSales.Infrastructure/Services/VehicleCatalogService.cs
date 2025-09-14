@@ -27,12 +27,17 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
     {
         if (httpClient.BaseAddress == null)
         {
-            httpClient.BaseAddress = new Uri("http://localhost:5000");
-            logger.LogWarning("BaseAddress não configurada, usando fallback: http://localhost:5000");
+            // 1. Variável de ambiente (configurada no docker-compose)
+            // 2. Fallback para desenvolvimento local
+            var baseUrl = Environment.GetEnvironmentVariable("ExternalServices__VehicleCatalogApi") 
+                          ?? "http://localhost:5000";
+            
+            httpClient.BaseAddress = new Uri(baseUrl);
+            logger.LogInformation("BaseAddress configurada via fallback: {BaseAddress}", httpClient.BaseAddress);
         }
         else
         {
-            logger.LogInformation("BaseAddress configurada: {BaseAddress}", httpClient.BaseAddress);
+            logger.LogInformation("BaseAddress configurada via HttpClient: {BaseAddress}", httpClient.BaseAddress);
         }
         return httpClient;
     }
