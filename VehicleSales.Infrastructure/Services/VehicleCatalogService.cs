@@ -27,7 +27,7 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
     {
         if (httpClient.BaseAddress == null)
         {
-            httpClient.BaseAddress = new Uri("https://localhost:7157");
+            httpClient.BaseAddress = new Uri("http://localhost:5000");
             logger.LogWarning("BaseAddress não configurada, usando fallback: http://localhost:5000");
         }
         else
