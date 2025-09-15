@@ -114,8 +114,6 @@ spec:
           # Never = usa apenas imagem local (Minikube)
           imagePullPolicy: Never  # Mude para Always em produção
           
-          
-          
           # ===========================================
           # Portas
           # ===========================================
@@ -135,24 +133,26 @@ spec:
           env:
             # Ambiente do ASP.NET Core
             - name: ASPNETCORE_ENVIRONMENT
-              valueFrom:
-                configMapKeyRef:
-                  name: vehicle-sales-config
-                  key: ASPNETCORE_ENVIRONMENT
+              value: "Development"
             
             # URLs de escuta
             - name: ASPNETCORE_URLS
-              valueFrom:
-                configMapKeyRef:
-                  name: vehicle-sales-config
-                  key: ASPNETCORE_URLS
+              value: "http://+:80"
             
-            # Connection String do banco de dados
-            - name: ConnectionStrings__DefaultConnection
+            # Connection String do MongoDB
+            - name: ConnectionStrings__MongoDb
               valueFrom:
                 secretKeyRef:
                   name: vehicle-sales-secrets
                   key: connection-string
+            
+            # Nome do database MongoDB
+            - name: MongoDbSettings__DatabaseName
+              value: "vehicle_sales_db"
+            
+            # URL da API externa do VehicleCatalog
+            - name: ExternalServices__VehicleCatalogApi
+              value: "http://vehicle-catalog-service:80"
             
             # Nível de log
             - name: Logging__LogLevel__Default
@@ -262,7 +262,7 @@ spec:
       # initContainers:
       #   - name: wait-for-db
       #     image: busybox:1.35
-      #     command: ['sh', '-c', 'until nc -z mongodb-service 5432; do echo waiting for db; sleep 2; done;']
+      #     command: ['sh', '-c', 'until nc -z mongodb-service 27017; do echo waiting for db; sleep 2; done;']
       
       # ===========================================
       # Volumes (se necessário)
@@ -311,6 +311,3 @@ spec:
       # Restart Policy
       # ===========================================
       restartPolicy: Always
-      
-      # ===========================================
-      #
