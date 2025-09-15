@@ -187,23 +187,34 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
     }
 
     /// <summary>
-    /// Pesquisa veículos disponíveis por filtros específicos
+    /// Pesquisa veículos disponíveis por filtros específicos avançados
     /// </summary>
     public async Task<IEnumerable<VehicleCatalogDto>?> SearchVehiclesAsync(
         string? brand = null, 
+        string? model = null,
         decimal? minPrice = null, 
         decimal? maxPrice = null, 
-        int? year = null)
+        int? year = null,
+        int? minYear = null,
+        int? maxYear = null,
+        string? color = null,
+        bool? isAvailable = null)
     {
         try
         {
-            logger.LogInformation("Pesquisando veículos com filtros: Brand={Brand}, MinPrice={MinPrice}, MaxPrice={MaxPrice}, Year={Year}",
-                brand, minPrice, maxPrice, year);
+            logger.LogInformation("Pesquisando veículos com filtros avançados: Brand={Brand}, Model={Model}, MinPrice={MinPrice}, MaxPrice={MaxPrice}, Year={Year}, MinYear={MinYear}, MaxYear={MaxYear}, Color={Color}, IsAvailable={IsAvailable}",
+                brand, model, minPrice, maxPrice, year, minYear, maxYear, color, isAvailable);
             
             var queryParams = new List<string>();
             
             if (!string.IsNullOrWhiteSpace(brand))
                 queryParams.Add($"brand={Uri.EscapeDataString(brand)}");
+            
+            if (!string.IsNullOrWhiteSpace(model))
+                queryParams.Add($"model={Uri.EscapeDataString(model)}");
+            
+            if (!string.IsNullOrWhiteSpace(color))
+                queryParams.Add($"color={Uri.EscapeDataString(color)}");
             
             if (minPrice.HasValue)
                 queryParams.Add($"minPrice={minPrice.Value}");
@@ -213,6 +224,15 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
             
             if (year.HasValue)
                 queryParams.Add($"year={year.Value}");
+            
+            if (minYear.HasValue)
+                queryParams.Add($"minYear={minYear.Value}");
+            
+            if (maxYear.HasValue)
+                queryParams.Add($"maxYear={maxYear.Value}");
+            
+            if (isAvailable.HasValue)
+                queryParams.Add($"isAvailable={isAvailable.Value.ToString().ToLower()}");
 
             var queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : "";
             var response = await _httpClient.GetAsync($"/api/vehicles/search{queryString}");
@@ -226,12 +246,12 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
             var jsonContent = await response.Content.ReadAsStringAsync();
             var vehicles = JsonSerializer.Deserialize<VehicleCatalogDto[]>(jsonContent, _jsonOptions);
 
-            logger.LogInformation("Pesquisa retornou {Count} veículos", vehicles?.Length ?? 0);
+            logger.LogInformation("Pesquisa avançada retornou {Count} veículos", vehicles?.Length ?? 0);
             return vehicles ?? Enumerable.Empty<VehicleCatalogDto>();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Erro ao pesquisar veículos");
+            logger.LogError(ex, "Erro ao pesquisar veículos com filtros avançados");
             return null;
         }
     }

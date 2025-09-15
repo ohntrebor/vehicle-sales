@@ -21,16 +21,16 @@ public interface IVehicleCatalogQueryService
     Task<IEnumerable<VehicleCatalogDto>?> GetAllVehiclesAsync();
 
     /// <summary>
-    /// Pesquisa veículos disponíveis por filtros específicos
+    /// Pesquisa veículos disponíveis por filtros específicos avançados
     /// </summary>
-    /// <param name="brand">Marca do veículo (opcional)</param>
-    /// <param name="minPrice">Preço mínimo (opcional)</param>
-    /// <param name="maxPrice">Preço máximo (opcional)</param>
-    /// <param name="year">Ano de fabricação (opcional)</param>
-    /// <returns>Lista filtrada de veículos disponíveis</returns>
     Task<IEnumerable<VehicleCatalogDto>?> SearchVehiclesAsync(
         string? brand = null, 
+        string? model = null,
         decimal? minPrice = null, 
         decimal? maxPrice = null, 
-        int? year = null);
+        int? year = null,
+        int? minYear = null,
+        int? maxYear = null,
+        string? color = null,
+        bool? isAvailable = null);
 }

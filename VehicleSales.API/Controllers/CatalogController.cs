@@ -41,28 +41,54 @@ public class CatalogController(IVehicleCatalogQueryService catalogQueryService) 
         }
     }
 
-    /// <summary>
+   /// <summary>
     /// Busca veículos por filtros específicos
     /// </summary>
     /// <param name="brand">Marca do veículo</param>
+    /// <param name="model">Modelo do veículo</param>
     /// <param name="minPrice">Preço mínimo</param>
     /// <param name="maxPrice">Preço máximo</param>
-    /// <param name="year">Ano do veículo</param>
+    /// <param name="year">Ano específico</param>
+    /// <param name="minYear">Ano mínimo</param>
+    /// <param name="maxYear">Ano máximo</param>
+    /// <param name="color">Cor do veículo</param>
+    /// <param name="isAvailable">Apenas disponíveis (true), apenas vendidos (false) ou todos (null)</param>
     /// <returns>Lista filtrada de veículos</returns>
     /// <response code="200">Lista filtrada retornada com sucesso</response>
+    /// <response code="400">Parâmetros de filtro inválidos</response>
     /// <response code="503">Serviço de catálogo indisponível</response>
     [HttpGet("vehicles/search")]
     [ProducesResponseType(typeof(IEnumerable<VehicleCatalogDto>), 200)]
+    [ProducesResponseType(400)]
     [ProducesResponseType(503)]
     public async Task<IActionResult> SearchVehicles(
         [FromQuery] string? brand = null,
+        [FromQuery] string? model = null,
         [FromQuery] decimal? minPrice = null,
         [FromQuery] decimal? maxPrice = null,
-        [FromQuery] int? year = null)
+        [FromQuery] int? year = null,
+        [FromQuery] int? minYear = null,
+        [FromQuery] int? maxYear = null,
+        [FromQuery] string? color = null,
+        [FromQuery] bool? isAvailable = null)
     {
         try
         {
-            var vehicles = await catalogQueryService.SearchVehiclesAsync(brand, minPrice, maxPrice, year);
+            // Validações básicas
+            if (minPrice.HasValue && minPrice < 0)
+                return BadRequest(new { message = "Preço mínimo não pode ser negativo" });
+                
+            if (maxPrice.HasValue && maxPrice < 0)
+                return BadRequest(new { message = "Preço máximo não pode ser negativo" });
+                
+            if (minPrice.HasValue && maxPrice.HasValue && minPrice > maxPrice)
+                return BadRequest(new { message = "Preço mínimo não pode ser maior que o máximo" });
+
+            if (minYear.HasValue && maxYear.HasValue && minYear > maxYear)
+                return BadRequest(new { message = "Ano mínimo não pode ser maior que o máximo" });
+
+            var vehicles = await catalogQueryService.SearchVehiclesAsync(
+                brand, model, minPrice, maxPrice, year, minYear, maxYear, color, isAvailable);
             
             if (vehicles == null)
                 return StatusCode(503, new { message = "Serviço de catálogo temporariamente indisponível" });
@@ -77,7 +103,7 @@ public class CatalogController(IVehicleCatalogQueryService catalogQueryService) 
             });
         }
     }
-
+   
     /// <summary>
     /// Busca um veículo específico por ID
     /// </summary>
