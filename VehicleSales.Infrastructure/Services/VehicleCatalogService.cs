@@ -96,17 +96,17 @@ public class VehicleCatalogService(HttpClient httpClient, ILogger<VehicleCatalog
             var json = JsonSerializer.Serialize(payload, _jsonOptions);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             
-            var response = await _httpClient.PostAsync("/api/vehicles/payment-webhook", content);
+            var response = await _httpClient.PostAsync("/api/vehicles/payment-status", content);
             
             if (response.IsSuccessStatusCode)
             {
-                logger.LogInformation("Webhook enviado com sucesso para veículo {VehicleId}", vehicleId);
+                logger.LogInformation("Status atualizado com sucesso com sucesso para veículo {VehicleId}", vehicleId);
                 return true;
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                logger.LogWarning("Erro ao enviar webhook: {StatusCode} - {ErrorContent}", response.StatusCode, errorContent);
+                logger.LogWarning("Erro ao atualizar status: {StatusCode} - {ErrorContent}", response.StatusCode, errorContent);
                 return false;
             }
         }
