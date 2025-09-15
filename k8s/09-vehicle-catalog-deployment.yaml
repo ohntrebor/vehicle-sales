@@ -1,0 +1,34 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vehicle-catalog
+  namespace: vehicle-sales
+  labels:
+    app: vehicle-catalog
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vehicle-catalog
+  template:
+    metadata:
+      labels:
+        app: vehicle-catalog
+        component: backend
+    spec:
+      containers:
+        - name: vehicle-catalog
+          image: ghcr.io/ohntrebor/vehicle-catalog:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: "Development"
+            - name: ASPNETCORE_URLS
+              value: "http://+:80"
+            - name: ConnectionStrings__DefaultConnection
+              value: "Host=postgres-service;Database=vehicle-db;Username=admin;Password=ra02xbo-P;Port=5432"
+          depends_on:
+            - postgres
