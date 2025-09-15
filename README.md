@@ -2,173 +2,105 @@
 
 ## 📋 Descrição do Projeto
 
-API RESTful desenvolvida em **.NET 8** para gerenciamento de revenda de veículos automotores. O sistema permite o cadastro, edição, venda e acompanhamento de veículos, incluindo integração com webhook para processamento de pagamentos.
+API RESTful desenvolvida em **.NET 8** para gerenciamento de vendas de veículos automotores. O sistema permite registrar vendas, processar pagamentos via webhook e consultar catálogo de veículos através de integração com serviço externo. Focado em operações de venda e processamento de transações.
 
 ### 🎯 Objetivos
-- Fornecer uma plataforma robusta para revenda de veículos
-- Implementar as melhores práticas de arquitetura de software
-- Garantir escalabilidade e manutenibilidade do código
+- Fornecer uma plataforma robusta para processamento de vendas de veículos
+- Integrar com sistema externo de catálogo de veículos
+- Implementar processamento de pagamentos via webhook
+- Garantir escalabilidade e manutenibilidade do código com Clean Architecture
 
-## **🏗️ Arquitetura do Projeto VehicleSales**
+## 🏗️ Arquitetura do Projeto VehicleSales
 
-Seu projeto segue a **Clean Architecture** com separação clara de responsabilidades. Vou explicar cada camada:
+O projeto segue a **Clean Architecture** com separação clara de responsabilidades:
 
+```
 VehicleSales/
-<br>
 ├── 🎯 VehicleSales.API          # Camada de Apresentação
-<br>
-├── 🧠 VehicleSales.Application  # Camada de Aplicação
-<br>
+├── 🧠 VehicleSales.Application  # Camada de Aplicação  
 ├── 💎 VehicleSales.Domain       # Camada de Domínio
-<br>
 └── 🔌 VehicleSales.Infrastructure # Camada de Infraestrutura
+```
 
-## **🎯 VehicleSales.API (Camada de Apresentação)**
-
+### 🎯 VehicleSales.API (Camada de Apresentação)
 **Responsabilidade:** Interface externa da aplicação
 
-### **O que contém:**
-- **Controllers** 📡 - Endpoints REST (recebem requisições HTTP)
-- **Health** 💊 - Health checks (monitoramento)
-- **Program.cs** ⚙️ - Configuração da aplicação
-- **appsettings.json** 📄 - Configurações (connection strings, URLs)
-- **VehicleSales.API.http** 📝 - Testes de API
+- **Controllers** 📡 - Endpoints REST (SalesController, CatalogController)
+- **Health** 💊 - Health checks para monitoramento
+- **Program.cs** ⚙️ - Configuração da aplicação e DI
+- **appsettings.json** 📄 - Configurações (MongoDB Atlas, URLs de serviços)
 
-### **Função:**
-- Recebe requisições HTTP
-- Valida entrada básica
-- Chama a camada Application
-- Retorna respostas HTTP
-- Configuração de DI e middleware
+### 🧠 VehicleSales.Application (Camada de Aplicação)
+**Responsabilidade:** Casos de uso e orquestração de negócio
 
-
-## **🧠 VehicleSales.Application (Camada de Aplicação)**
-
-**Responsabilidade:** Casos de uso e lógica de negócio
-
-### **O que contém:**
-- **Commands** 📤 - Operações que modificam dados (Create, Update, Delete)
-- **Queries** 📥 - Operações de consulta (Get, List)
+- **UseCases** 📤 - Lógica de negócio (vendas, pagamentos)
 - **DTOs** 📦 - Objetos de transferência de dados
-- **Handlers** 🔄 - Processadores dos Commands/Queries (MediatR)
-- **Mappings** 🔀 - Configurações do AutoMapper
-- **Validators** ✅ - Regras de validação (FluentValidation)
+- **Interfaces** 🔗 - Contratos para serviços externos
+- **Controllers** 🔄 - Orquestradores de casos de uso
+- **Services** 🌐 - Integração com APIs externas
 
-### **Função:**
-- Orquestra as operações de negócio
-- Aplica regras de validação
-- Converte dados entre camadas
-- Implementa casos de uso específicos
+### 💎 VehicleSales.Domain (Camada de Domínio)
+**Responsabilidade:** Regras de negócio puras
 
+- **Entities** 🏛️ - Sale (Venda)
+- **Enums** 📋 - PaymentStatus (Status de pagamento)
+- **Gateways** 🔗 - Contratos para persistência
 
-## **💎 VehicleSales.Domain (Camada de Domínio)**
+### 🔌 VehicleSales.Infrastructure (Camada de Infraestrutura)
+**Responsabilidade:** Implementações técnicas
 
-**Responsabilidade:** Regras de negócio puras e entidades
+- **Data** 🗄️ - Configurações MongoDB
+- **Gateways** 📚 - Implementações de persistência
+- **External** 🌐 - Integrações com serviços externos
 
-### **O que contém:**
-- **Entities** 🏛️ - Entidades do domínio (Vehicle)
-- **Enums** 📋 - Enumerações do negócio
-- **Interfaces** 🔗 - Contratos (repositórios, serviços)
+## 🔄 Fluxo de Integração
 
-### **Função:**
-- Define as regras de negócio fundamentais
-- Modela as entidades principais
-- Estabelece contratos para outras camadas
-- **NÃO depende de nenhuma outra camada**
-
-
-## **🔌 VehicleSales.Infrastructure (Camada de Infraestrutura)**
-
-**Responsabilidade:** Implementações técnicas e acesso a dados
-
-### **O que contém:**
-- **Data** 🗄️ - DbContext, configurações do Entity Framework
-- **Migrations** 📋 - Scripts de migração do banco
-- **Repositories** 📚 - Implementações dos repositórios
-
-### **Função:**
-- Acesso ao banco de dados
-- Implementa interfaces do Domain
-- Gerencia persistência de dados
-- Configurações do Entity Framework
-
-
-## **🔄 Fluxo de Dados (Como funciona):**
+O sistema integra-se com o **Vehicle Catalog API** para consulta de veículos:
 
 ```
-1. 📱 Cliente faz requisição HTTP
-   ↓
-2. 🎯 API Controller recebe
-   ↓
-3. 🧠 Application Handler processa
-   ↓
-4. 💎 Domain aplica regras de negócio
-   ↓
-5. 🔌 Infrastructure salva no banco
-   ↓
-6. 🔄 Resposta volta pela mesma rota
+1. 📱 Cliente consulta catálogo → CatalogController
+2. 🌐 Proxy para Vehicle Catalog API
+3. 📊 Retorna dados de veículos disponíveis
+4. 🛒 Cliente registra venda → SalesController  
+5. 💾 Salva no MongoDB Atlas
+6. 💳 Processa webhook de pagamento
+7. 🔄 Notifica Vehicle Catalog sobre venda
 ```
-
-## **🎯 Benefícios desta Arquitetura:**
-
-- **✅ Testabilidade** - Cada camada pode ser testada isoladamente
-- **✅ Manutenibilidade** - Mudanças em uma camada não afetam outras
-- **✅ Escalabilidade** - Fácil de expandir funcionalidades
-- **✅ Flexibilidade** - Pode trocar banco/framework sem afetar negócio
-- **✅ SOLID** - Seguem os princípios de design
-
-## **💡 Resumo das Responsabilidades:**
-
-| Camada | "Eu cuido de..." |
-|--------|------------------|
-| **API** | "Receber/enviar dados via HTTP" |
-| **Application** | "Processar casos de uso do negócio" |
-| **Domain** | "Regras fundamentais do veículo" |
-| **Infrastructure** | "Salvar/buscar dados no banco" |
-
-### 🔧 Padrões Implementados
-
-- **CQRS (Command Query Responsibility Segregation)** com MediatR
-- **Repository Pattern** para abstração de acesso a dados
-- **Unit of Work** para gerenciamento de transações
-- **Dependency Injection** para inversão de controle
-- **AutoMapper** para mapeamento objeto-objeto
-- **FluentValidation** para validação de dados
 
 ## 🚀 Funcionalidades
 
-### Veículos
-- ✅ **Cadastrar veículo** - Registra novo veículo para venda
-- ✅ **Editar veículo** - Atualiza informações do veículo
-- ✅ **Listar disponíveis** - Veículos à venda ordenados por preço
-- ✅ **Listar vendidos** - Histórico de vendas ordenado por preço
+### 📊 Consulta de Catálogo
+- ✅ **Listar veículos** - Todos os veículos do catálogo externo
+- ✅ **Buscar por filtros** - Marca, modelo, preço, ano, cor, disponibilidade
+- ✅ **Buscar por ID** - Detalhes de veículo específico
 
-### Vendas
-- ✅ **Registrar venda** - Efetua venda com CPF do comprador
-- ✅ **Webhook de pagamento** - Atualiza status do pagamento
-- ✅ **Cancelar venda** - Reverte venda se pagamento cancelado
+### 💰 Gestão de Vendas
+- ✅ **Registrar venda** - Cria nova venda com código de pagamento único
+- ✅ **Consultar venda** - Busca venda por ID
+- ✅ **Listar vendas** - Histórico completo de vendas
+- ✅ **Webhook de pagamento** - Atualiza status via gateway de pagamento
+- ✅ **Notificação de venda** - Informa Vehicle Catalog sobre venda confirmada
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **.NET 8** - Framework principal
-- **Entity Framework Core 8** - ORM para acesso a dados
-- **🐘 Postgre** - Banco de dados relacional
+- **MongoDB Atlas** - Banco de dados em nuvem
 - **Docker** - Containerização
 - **Kubernetes** - Orquestração de containers
 - **Swagger/OpenAPI** - Documentação da API
-- **MediatR** - Implementação de CQRS
-- **AutoMapper** - Mapeamento de objetos
-- **FluentValidation** - Validação de dados
+- **HttpClient** - Integração com Vehicle Catalog API
+- **Health Checks** - Monitoramento de saúde
 
 ## 📦 Como Executar
 
 ### Pré-requisitos
 
 - Docker e Docker Compose instalados
-- .NET 8 SDK (apenas para desenvolvimento)
+- .NET 8 SDK (desenvolvimento)
 - Kubernetes (kubectl) configurado
-- PostgreSQL (local ou via Docker)
-- Minikube (para deploy em cluster)
+- Minikube (para deploy local)
+- MongoDB Atlas configurado
+- Vehicle Catalog API rodando
 
 ### 💻 Executando Localmente (Desenvolvimento)
 
@@ -176,9 +108,9 @@ VehicleSales/
 # Instale as dependências
 dotnet restore
 
-# Configure o 🐘 Postgre local ou ajuste a connection string
-# Execute as migrations
-dotnet ef database update -p VehicleSales.Infrastructure -s VehicleSales.API
+# Configure connection strings no appsettings.json
+# MongoDB Atlas: mongodb+srv://...
+# Vehicle Catalog API: http://localhost:5000/api
 
 # Execute a aplicação
 dotnet run --project VehicleSales.API
@@ -187,14 +119,15 @@ dotnet run --project VehicleSales.API
 ```
 
 ### 🐋 Executando com Docker
-# ⚠️ Certifique-se de que o Docker Desktop esteja rodando
+
 ```bash
 # Força rebuild e sobe em background
 docker compose up -d --build
 
-# Acesse em: http://localhost:5000/swagger/index.html
+# Vehicle Sales API: http://localhost:5001/swagger/index.html
+# Vehicle Catalog API: http://localhost:5000/swagger/index.html
 
-# 📴 Parar containers (mas mantém volumes/dados)
+# Parar containers
 docker compose down
 ```
 
@@ -208,66 +141,76 @@ kubectl apply -f k8s/
 kubectl get all -n vehicle-sales
 
 # Port-forward para teste local
-kubectl port-forward -n vehicle-sales service/vehicle-sales-api-service 8080:80
-
-# Acesse em: http://localhost:8080/swagger/index.html
-```
-
-### ☸️ Deploy com Minikube (com Makefile)
-# ⚠️ Certifique-se de ter o Makefile e Minikube instalado em sua máquina *WINDOWS*
-
-```bash
-## 🎯 Inicia Minikube e configura ambiente Kubernetes
-make k8s-start
-
-## 🔨 Constrói imagem no ambiente Minikube
-make k8s-build
-
- ## 🚀 Faz deploy da aplicação no Kubernetes
-make k8s-deploy
+kubectl port-forward -n vehicle-sales service/vehicle-sales-api-service 9000:80
 
 # Acesse em: http://localhost:9000/swagger/index.html
 ```
 
+### ☸️ Deploy com Minikube (Automatizado)
+
+```bash
+# Setup completo com um comando
+make k8s-full-deploy
+
+# Acessos:
+# Vehicle Sales API: http://localhost:9000/swagger/index.html
+# Vehicle Catalog API: http://localhost:5000/swagger/index.html
+
+# Para parar port-forwards
+make k8s-stop
+```
+
 ## 🧪 Testando a API
 
-### Endpoints Principais
+### 📊 Endpoints de Catálogo
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/api/vehicles` | Cadastrar veículo |
-| PUT | `/api/vehicles/{id}` | Editar veículo |
-| GET | `/api/vehicles/available` | Listar disponíveis |
-| GET | `/api/vehicles/sold` | Listar vendidos |
-| POST | `/api/vehicles/sale` | Registrar venda |
-| POST | `/api/vehicles/payment-webhook` | Webhook pagamento |
+| GET | `/api/catalog/vehicles` | Listar todos os veículos |
+| GET | `/api/catalog/vehicles/search` | Buscar com filtros |
+| GET | `/api/catalog/vehicles/{id}` | Buscar veículo por ID |
+
+### 💰 Endpoints de Vendas
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/api/sales` | Registrar nova venda |
+| GET | `/api/sales/{id}` | Buscar venda por ID |
+| GET | `/api/sales` | Listar todas as vendas |
+| POST | `/api/sales/payment-webhook` | Webhook de pagamento |
 
 ### Exemplos de Requisições
 
-#### Cadastrar Veículo
+#### Buscar Veículos com Filtros
 ```json
-POST /api/vehicles
-{
-  "brand": "Toyota",
-  "model": "Corolla",
-  "year": 2022,
-  "color": "Prata",
-  "price": 95000.00
-}
+GET /api/catalog/vehicles/search?brand=Toyota&minPrice=50000&maxPrice=100000&isAvailable=true
 ```
 
 #### Registrar Venda
 ```json
-POST /api/vehicles/sale
+POST /api/sales
 {
-  "vehicleId": "guid-do-veiculo",
+  "vehicleId": "550e8400-e29b-41d4-a716-446655440000",
   "buyerCpf": "12345678901"
 }
 ```
 
-#### Confirmar Pagamento
+#### Resposta da Venda
 ```json
-POST /api/vehicles/payment-webhook
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "vehicleId": "550e8400-e29b-41d4-a716-446655440000",
+  "buyerCpf": "12345678901",
+  "paymentCode": "PAY-ABC123",
+  "paymentStatus": "Pending",
+  "saleDate": "2024-09-15T10:30:00Z",
+  "totalAmount": 95000.00
+}
+```
+
+#### Webhook de Pagamento
+```json
+POST /api/sales/payment-webhook
 {
   "paymentCode": "PAY-ABC123",
   "status": "confirmed"
@@ -278,46 +221,105 @@ POST /api/vehicles/payment-webhook
 
 Importe o arquivo `VehicleSales.postman_collection.json` no Postman para ter acesso a todos os endpoints configurados.
 
+## 🔗 Integração com Vehicle Catalog
+
+O sistema integra-se com o **Vehicle Catalog API** para:
+
+- **Consultar veículos disponíveis** - Proxy transparente para o catálogo
+- **Notificar vendas** - Informa quando veículo é vendido
+- **Verificar disponibilidade** - Valida se veículo está disponível para venda
+
+### Configuração da Integração
+
+```json
+{
+  "ExternalServices": {
+    "VehicleCatalogApi": "http://vehicle-catalog-service:80/api"
+  }
+}
+```
+
 ## 📊 Monitoramento
 
 ### Health Checks
 
-- `/api/health` - Status geral da aplicação
-- `/api/health/live` - Liveness probe
-- `/api/health/ready` - Readiness probe
+- `/health` - Status geral (inclui MongoDB e Vehicle Catalog API)
+- `/health/live` - Liveness probe para Kubernetes
+- `/health/ready` - Readiness probe para Kubernetes
+
+### Verificações Incluídas
+
+- ✅ **MongoDB Atlas** - Conectividade com banco de dados
+- ✅ **Vehicle Catalog API** - Disponibilidade do serviço externo
+- ✅ **Memória** - Uso de recursos do sistema
 
 ## 🔒 Segurança
 
-- ✅ Validação de entrada com FluentValidation
-- ✅ Proteção contra SQL Injection via Entity Framework
-- ✅ Secrets gerenciados via Kubernetes Secrets
-- ✅ HTTPS habilitado em produção
+- ✅ **Connection Strings** - Secrets gerenciados via Kubernetes
+- ✅ **Validação de Entrada** - DTOs com validação rigorosa
+- ✅ **HTTPS** - Habilitado em produção
+- ✅ **CORS** - Configurado para ambientes apropriados
 
-## 📈 Métricas e Performance
+## 📈 Performance e Escalabilidade
 
-- **Response Time**: < 200ms para operações de leitura
-- **Throughput**: Suporta 100+ requisições simultâneas
-- **Disponibilidade**: 99.9% com 3 réplicas no Kubernetes
+- **Response Time**: < 500ms para consultas de catálogo
+- **Throughput**: Suporta 50+ vendas simultâneas
+- **Disponibilidade**: 99.9% com múltiplas réplicas
+- **Auto-scaling**: Configurado no Kubernetes baseado em CPU
 
+## 🗄️ Estrutura de Dados
 
-## 👥 Autores
+### Sale (Venda)
+```csharp
+{
+  "Id": "Guid",
+  "VehicleId": "Guid", 
+  "BuyerCpf": "string",
+  "PaymentCode": "string",
+  "PaymentStatus": "Pending|Paid|Cancelled|Failed",
+  "SaleDate": "DateTime",
+  "TotalAmount": "decimal"
+}
+```
 
-- **Robert A. dos Anjos**
+### PaymentStatus (Enum)
+- **Pending** - Aguardando pagamento
+- **Paid** - Pago e confirmado
+- **Cancelled** - Cancelado
+- **Failed** - Falha no pagamento
+
+## 🚀 Roadmap
+
+- [ ] **Autenticação JWT** - Controle de acesso
+- [ ] **Relatórios** - Dashboard de vendas
+- [ ] **Notificações** - Email/SMS para compradores
+- [ ] **Histórico de Pagamentos** - Auditoria completa
+- [ ] **Cache Redis** - Performance de consultas
+
+## 👥 Autor
+
+**Robert A. dos Anjos**
+- Email: robert.ads.anjos@gmail.com
+- GitHub: @ohntrebor
 
 ## 📞 Suporte
 
-Para suporte, envie um email para: robert.ads.anjos@gmail.com
+Para suporte técnico, envie um email para: robert.ads.anjos@gmail.com
 
-## Documentação
+## 📋 Documentação Técnica
 
-Documentação do entregável está em documentation.md
-Para converter a documentação em PDF, usei o comando 
-⚠️ Certifique-se de ter o Pandoc e o wkhtmltopdf instalados, caso queira executar na sua máquina:
+Para documentação técnica detalhada, consulte o arquivo `documentation.md`.
+
+### Gerar PDF da Documentação
+
 ```bash
+# Instalar dependências (Windows)
 choco install pandoc && choco install wkhtmltopdf
-```
 
-
-```bash
+# Gerar PDF
 pandoc documentation.md -o VehicleSalesAPI_Documentation.pdf --pdf-engine=wkhtmltopdf --toc --number-sections
 ```
+
+---
+
+*Sistema de vendas de veículos desenvolvido com foco em arquitetura limpa, escalabilidade e integração com serviços externos.*
