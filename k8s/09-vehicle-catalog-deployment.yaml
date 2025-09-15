@@ -56,6 +56,11 @@ spec:
     
     spec:
       # ===========================================
+      # Service Account - Desabilita automontagem do token
+      # ===========================================
+      automountServiceAccountToken: false
+      
+      # ===========================================
       # Containers
       # ===========================================
       containers:
