@@ -227,15 +227,21 @@ full-k8s-setup: k8s-start k8s-build k8s-deploy
 ## 🚀 Setup completo Minikube em um comando único
 k8s-full-deploy:
 	@echo "🚀 Iniciando setup completo do Minikube..."
-	@echo "🎯 1/4 - Iniciando Minikube..."
+	@echo "🎯 1/6 - Iniciando Minikube..."
 	minikube start --driver=docker
-	@echo "🔧 2/4 - Configurando Docker do Minikube..."
+	@echo "🔧 2/6 - Configurando Docker do Minikube e fazendo build..."
 	@powershell -Command "minikube docker-env | Invoke-Expression; docker build -t vehicle-sales-api:latest ."
-	@echo "🚀 3/4 - Fazendo deploy da aplicacao..."
+	@echo "📥 3/6 - Baixando imagem do Vehicle Catalog..."
+	@powershell -Command "minikube docker-env | Invoke-Expression; docker pull ghcr.io/ohntrebor/vehicle-catalog:latest"
+	@echo "🚀 4/6 - Fazendo deploy da aplicacao..."
 	kubectl apply -f k8s/
-	@echo "⏳ Aguardando pods ficarem prontos..."
+	@echo "⏳ 5/6 - Aguardando bancos de dados ficarem prontos..."
+	kubectl wait --for=condition=ready pod -l app=mongodb -n vehicle-sales --timeout=300s
+	kubectl wait --for=condition=ready pod -l app=postgres -n vehicle-sales --timeout=300s
+	@echo "⏳ Aguardando APIs ficarem prontas..."
+	kubectl wait --for=condition=ready pod -l app=vehicle-catalog -n vehicle-sales --timeout=300s
 	kubectl wait --for=condition=ready pod -l app=vehicle-sales-api -n vehicle-sales --timeout=300s
-	@echo "🌐 4/4 - Configurando port-forward na porta 9000..."
+	@echo "🌐 6/6 - Configurando port-forward na porta 9000..."
 	@echo ""
 	@echo "✅ Setup Minikube completo finalizado!"
 	kubectl port-forward -n vehicle-sales service/vehicle-sales-api-service 9000:80
