@@ -14,7 +14,7 @@
 **Vehicle Catalog API:** https://github.com/ohntrebor/vehicle-catalog
 
 ### 🎥 Vídeo Demonstrativo
-**https://youtu.be/ehMrxDCCR5k (15 min)**
+**https://www.youtube.com/watch?v=LKEupUM92_Q (16 min)**
 
 ---
 
