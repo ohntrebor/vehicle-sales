@@ -1,34 +1,200 @@
-﻿apiVersion: apps/v1
+﻿# ===========================================
+# DEPLOYMENT - Vehicle Catalog API
+# ===========================================
+# Define como a API Vehicle Catalog será executada no cluster
+# Baseado na configuração do docker-compose
+
+apiVersion: apps/v1
 kind: Deployment
 metadata:
+  # Nome do Deployment
   name: vehicle-catalog
+  
+  # Namespace onde será criado
   namespace: vehicle-sales
+  
+  # Labels para organização
   labels:
     app: vehicle-catalog
     component: backend
+    tier: application
+    version: latest
+    framework: dotnet
+
 spec:
+  # ===========================================
+  # Configuração de Réplicas
+  # ===========================================
   replicas: 1
+  
+  # ===========================================
+  # Estratégia de Deployment
+  # ===========================================
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # ===========================================
+  # Seletor de Pods
+  # ===========================================
   selector:
     matchLabels:
       app: vehicle-catalog
+      component: backend
+  
+  # ===========================================
+  # Template do Pod
+  # ===========================================
   template:
     metadata:
       labels:
         app: vehicle-catalog
         component: backend
+        tier: application
+    
     spec:
+      # ===========================================
+      # Containers
+      # ===========================================
       containers:
         - name: vehicle-catalog
+          
+          # Imagem do GitHub Container Registry (conforme docker-compose)
           image: ghcr.io/ohntrebor/vehicle-catalog:latest
+          
+          # Política de pull da imagem
           imagePullPolicy: IfNotPresent
+          
+          # ===========================================
+          # Portas
+          # ===========================================
           ports:
-            - containerPort: 80
+            - containerPort: 80        # Porta HTTP da aplicação
+              name: http               # Nome para referência
+              protocol: TCP            # Protocolo
+          
+          # ===========================================
+          # Variáveis de Ambiente
+          # ===========================================
           env:
+            # Ambiente do ASP.NET Core (conforme docker-compose)
             - name: ASPNETCORE_ENVIRONMENT
               value: "Development"
+            
+            # URLs de escuta (conforme docker-compose)
             - name: ASPNETCORE_URLS
               value: "http://+:80"
+            
+            # Connection String do PostgreSQL (conforme docker-compose)
+            # Host=postgres se refere ao nome do service do PostgreSQL
             - name: ConnectionStrings__DefaultConnection
               value: "Host=postgres-service;Database=vehicle-db;Username=admin;Password=ra02xbo-P;Port=5432"
-          depends_on:
-            - postgres
+          
+          # ===========================================
+          # Recursos
+          # ===========================================
+          resources:
+            # Recursos mínimos garantidos
+            requests:
+              memory: "256Mi"   # 256MB RAM mínimo
+              cpu: "100m"       # 0.1 CPU cores
+            
+            # Recursos máximos permitidos
+            limits:
+              memory: "512Mi"   # 512MB RAM máximo
+              cpu: "500m"       # 0.5 CPU cores
+          
+          # ===========================================
+          # Health Checks
+          # ===========================================
+          
+          # Liveness Probe - verifica se a aplicação está viva
+          livenessProbe:
+            httpGet:
+              path: /health          # Endpoint de health (ajuste se necessário)
+              port: 80              # Porta
+              scheme: HTTP          # Protocolo
+            
+            initialDelaySeconds: 30  # Aguarda 30s após iniciar
+            periodSeconds: 10        # Verifica a cada 10s
+            timeoutSeconds: 5        # Timeout de 5s
+            failureThreshold: 3      # Falha após 3 tentativas
+            successThreshold: 1      # OK após 1 sucesso
+          
+          # Readiness Probe - verifica se está pronto para tráfego
+          readinessProbe:
+            httpGet:
+              path: /health          # Endpoint de health (ajuste se necessário)
+              port: 80              # Porta
+              scheme: HTTP          # Protocolo
+            
+            initialDelaySeconds: 5   # Aguarda 5s após iniciar
+            periodSeconds: 5         # Verifica a cada 5s
+            timeoutSeconds: 3        # Timeout de 3s
+            failureThreshold: 3      # Falha após 3 tentativas
+            successThreshold: 1      # OK após 1 sucesso
+      
+      # ===========================================
+      # DNS Policy
+      # ===========================================
+      dnsPolicy: ClusterFirst
+      
+      # ===========================================
+      # Restart Policy
+      # ===========================================
+      restartPolicy: Always
+
+---
+
+# ===========================================
+# SERVICE - Expõe o Vehicle Catalog internamente e externamente
+# ===========================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  # Nome do Service
+  name: vehicle-catalog-service
+  
+  # Namespace onde será criado
+  namespace: vehicle-sales
+  
+  # Labels para organização
+  labels:
+    app: vehicle-catalog
+    component: backend
+    tier: application
+  
+  # Annotations para configurações específicas
+  annotations:
+    description: "Service para expor a Vehicle Catalog API"
+
+spec:
+  # ===========================================
+  # Tipo do Service
+  # ===========================================
+  # LoadBalancer para acesso externo
+  type: LoadBalancer
+  
+  # ===========================================
+  # Seletor de Pods
+  # ===========================================
+  selector:
+    app: vehicle-catalog
+    component: backend
+  
+  # ===========================================
+  # Portas
+  # ===========================================
+  ports:
+    - name: http              # Nome da porta
+      port: 80               # Porta do Service (externa)
+      targetPort: 80         # Porta do Container
+      protocol: TCP          # Protocolo
+  
+  # ===========================================
+  # Session Affinity
+  # ===========================================
+  sessionAffinity: None
