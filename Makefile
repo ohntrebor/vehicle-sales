@@ -244,7 +244,7 @@ k8s-full-deploy:
 	@echo "🌐 6/6 - Configurando port-forward na porta 9000..."
 	@echo ""
 	@echo "✅ Setup Minikube completo finalizado!"
-    kubectl port-forward -n vehicle-sales service/vehicle-catalog-service 5000:80
+    kubectl port-forward -n vehicle-sales service/vehicle-catalog-service 5000:80 &
 	kubectl port-forward -n vehicle-sales service/vehicle-sales-api-service 9000:80
 	@echo "🔗 API disponivel em: http://localhost:9000/swagger/index.html"
 	@echo "⏹️ Para parar o port-forward: Ctrl+C"
